@@ -24,7 +24,7 @@ export function FormLogin() {
         setErro(await erroDaResposta(r, 'Não foi possível entrar'))
         return
       }
-      router.replace('/kanban')
+      router.replace('/agenda')
       router.refresh()
     } catch {
       setErro('Sem conexão. Verifique a internet e tente de novo.')
