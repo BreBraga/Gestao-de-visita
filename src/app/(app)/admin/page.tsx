@@ -1,13 +1,19 @@
 import { exigirGestor } from '@/lib/auth/atual'
 import { listarUsuarios } from '@/lib/auth/usuarios'
 import { listarAgentes } from '@/lib/zaple/agentes'
+import { listarNaoSincronizadas, db } from '@/lib/visita/repositorio'
 import { FormUsuario } from './FormUsuario'
+import { Pendentes } from './Pendentes'
 
 export const dynamic = 'force-dynamic'
 
 export default async function Admin() {
   await exigirGestor()
-  const [usuarios, agentes] = await Promise.all([listarUsuarios(), listarAgentes()])
+  const [usuarios, agentes, pendentes] = await Promise.all([
+    listarUsuarios(),
+    listarAgentes(),
+    listarNaoSincronizadas(db),
+  ])
 
   // Indexado por userId, que é o que guardamos em usuario.zapleUserId.
   const nomeDoAgente = new Map(agentes.map((a) => [a.userId, a.nome]))
@@ -15,6 +21,7 @@ export default async function Admin() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4">
       <h1 className="text-xl font-semibold">Vendedores</h1>
+      <Pendentes quantidade={pendentes.length} />
       <FormUsuario agentes={agentes} />
 
       <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
