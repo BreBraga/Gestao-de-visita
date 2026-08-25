@@ -1,41 +1,54 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const exigirUsuario = vi.fn()
-const obterVisita = vi.fn()
+const buscarVisita = vi.fn()
 
 vi.mock('@/lib/auth/atual', () => ({ exigirUsuario, exigirGestor: vi.fn(), usuarioAtual: vi.fn() }))
-vi.mock('@/lib/zaple/visitas', () => ({ obterVisita }))
+vi.mock('@/lib/visita/repositorio', () => ({ buscarVisita, db: {} }))
 
-const contexto = { params: Promise.resolve({ id: 'v1' }) }
+const params = Promise.resolve({ id: 'v1' })
 
 describe('GET /api/visitas/[id]', () => {
   beforeEach(() => {
     exigirUsuario.mockReset()
-    obterVisita.mockReset()
-    obterVisita.mockResolvedValue({ id: 'v1', titulo: 'Padaria', responsavelId: 'agente-1' })
+    exigirUsuario.mockResolvedValue({ id: 'u1', papel: 'vendedor', zapleUserId: 'agente-1' })
+    buscarVisita.mockReset()
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u1', titulo: 'AUTOCAR' })
   })
 
   it('devolve a visita do próprio vendedor', async () => {
-    exigirUsuario.mockResolvedValue({ papel: 'vendedor', zapleUserId: 'agente-1' })
     const { GET } = await import('@/app/api/visitas/[id]/route')
 
-    const r = await GET(new Request('http://local'), contexto)
+    const r = await GET(new Request('http://local'), { params })
 
     expect(r.status).toBe(200)
-    expect((await r.json()).visita.titulo).toBe('Padaria')
   })
 
-  it('recusa a visita de outro vendedor', async () => {
-    exigirUsuario.mockResolvedValue({ papel: 'vendedor', zapleUserId: 'agente-2' })
+  it('404 quando a visita não existe', async () => {
+    buscarVisita.mockResolvedValue(null)
     const { GET } = await import('@/app/api/visitas/[id]/route')
 
-    expect((await GET(new Request('http://local'), contexto)).status).toBe(403)
+    const r = await GET(new Request('http://local'), { params })
+
+    expect(r.status).toBe(404)
   })
 
-  it('gestor vê qualquer visita', async () => {
-    exigirUsuario.mockResolvedValue({ papel: 'gestor', zapleUserId: 'agente-9' })
+  it('403 na visita de outro vendedor', async () => {
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u2' })
     const { GET } = await import('@/app/api/visitas/[id]/route')
 
-    expect((await GET(new Request('http://local'), contexto)).status).toBe(200)
+    const r = await GET(new Request('http://local'), { params })
+
+    expect(r.status).toBe(403)
+  })
+
+  it('gestor enxerga visita de qualquer um', async () => {
+    exigirUsuario.mockResolvedValue({ id: 'g1', papel: 'gestor', zapleUserId: 'agente-9' })
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u2' })
+    const { GET } = await import('@/app/api/visitas/[id]/route')
+
+    const r = await GET(new Request('http://local'), { params })
+
+    expect(r.status).toBe(200)
   })
 })

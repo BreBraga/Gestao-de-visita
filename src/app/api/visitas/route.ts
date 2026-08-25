@@ -1,35 +1,30 @@
 import { z } from 'zod'
 import { exigirUsuario } from '@/lib/auth/atual'
-import { criarVisita, listarVisitas } from '@/lib/zaple/visitas'
-import { listarEtapas } from '@/lib/zaple/painel'
-import { responderErroZaple } from '@/lib/api/erros'
+import { criarVisita, listarDoDia, db } from '@/lib/visita/repositorio'
+import { sincronizar } from '@/lib/visita/sincronizador'
+
+/** 'YYYY-MM-DD'. String, não Date: o fuso não pode mover a visita de dia. */
+const DataISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve ser AAAA-MM-DD')
 
 export async function GET(req: Request) {
   const u = await exigirUsuario()
   const url = new URL(req.url)
 
-  // "Ver todos" é privilégio do gestor. Um vendedor que passe ?todos=1 na mão
-  // continua vendo apenas as próprias visitas.
+  const data = url.searchParams.get('data') ?? new Date().toISOString().slice(0, 10)
   const todos = url.searchParams.get('todos') === '1' && u.papel === 'gestor'
 
-  try {
-    const pagina = await listarVisitas({
-      etapaId: url.searchParams.get('etapaId') ?? undefined,
-      busca: url.searchParams.get('busca') ?? undefined,
-      responsavelId: todos ? undefined : u.zapleUserId,
-    })
-
-    return Response.json(pagina)
-  } catch (erro) {
-    return responderErroZaple(erro)
-  }
+  const visitas = await listarDoDia(db, { data, usuarioId: todos ? undefined : u.id })
+  return Response.json({ visitas })
 }
 
 const NovaEntrada = z.object({
   titulo: z.string().min(1).max(500),
   contatoId: z.guid(),
-  prazo: z.iso.datetime().optional(),
-  responsavelId: z.guid().optional(),
+  contatoNome: z.string().min(1),
+  data: DataISO,
+  tipo: z.enum(['prospeccao', 'recorrente']).optional(),
+  usuarioId: z.uuid().optional(),
+  zapleUserId: z.guid().optional(),
 })
 
 export async function POST(req: Request) {
@@ -37,30 +32,26 @@ export async function POST(req: Request) {
 
   const analisado = NovaEntrada.safeParse(await req.json().catch(() => null))
   if (!analisado.success) {
-    return Response.json({ erro: 'Informe título e cliente' }, { status: 400 })
+    return Response.json({ erro: 'Informe cliente, título e data' }, { status: 400 })
   }
 
-  try {
-    const etapas = await listarEtapas()
-    const inicial = etapas.find((e) => e.inicial)
-    if (!inicial) return Response.json({ erro: 'Painel sem etapa inicial' }, { status: 500 })
+  // Só o gestor cria visita para outra pessoa.
+  const paraOutro = u.papel === 'gestor' && analisado.data.usuarioId && analisado.data.zapleUserId
 
-    // Só o gestor atribui visita a outra pessoa.
-    const responsavelId =
-      u.papel === 'gestor' && analisado.data.responsavelId
-        ? analisado.data.responsavelId
-        : u.zapleUserId
+  const criada = await criarVisita(db, {
+    contatoId: analisado.data.contatoId,
+    contatoNome: analisado.data.contatoNome,
+    usuarioId: paraOutro ? analisado.data.usuarioId! : u.id,
+    zapleUserId: paraOutro ? analisado.data.zapleUserId! : u.zapleUserId,
+    data: analisado.data.data,
+    titulo: analisado.data.titulo,
+    tipo: analisado.data.tipo,
+  })
 
-    const visita = await criarVisita({
-      etapaId: inicial.id,
-      titulo: analisado.data.titulo,
-      responsavelId,
-      contatoIds: [analisado.data.contatoId],
-      prazo: analisado.data.prazo,
-    })
+  // A visita já existe. O Zaple é cópia: se falhar, `sincronizado_em` fica
+  // nulo e o admin reprocessa. O vendedor não fica sabendo, porque para ele
+  // não houve erro nenhum.
+  await sincronizar(db, criada)
 
-    return Response.json({ visita }, { status: 201 })
-  } catch (erro) {
-    return responderErroZaple(erro)
-  }
+  return Response.json({ visita: criada }, { status: 201 })
 }
