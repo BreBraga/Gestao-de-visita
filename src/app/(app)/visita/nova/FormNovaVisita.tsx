@@ -1,20 +1,20 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Agente, Contato } from '@/lib/zaple/tipos'
+import type { Contato } from '@/lib/zaple/tipos'
 import { erroDaResposta } from '@/lib/api/cliente'
 import { hoje } from '@/lib/visita/datas'
 
-/** `agentes` vem vazio para vendedor: a visita é sempre dele. */
-export function FormNovaVisita({
-  agentes = [],
-  souAgente = true,
-}: {
-  agentes?: Agente[]
-  souAgente?: boolean
-}) {
+/**
+ * A visita é sempre de quem está criando.
+ *
+ * O seletor de responsável saiu com a inversão da fonte da verdade: atribuir a
+ * outra pessoa exige o par `usuarioId` + `zapleUserId`, e esta tela só conhece
+ * os agentes do Zaple, não os usuários do nosso banco. Volta na Fatia B, com a
+ * lista vinda de `listarUsuarios()`.
+ */
+export function FormNovaVisita() {
   const router = useRouter()
-  const [responsavelId, setResponsavelId] = useState('')
   const [busca, setBusca] = useState('')
   const [achados, setAchados] = useState<Contato[] | null>(null)
   const [escolhido, setEscolhido] = useState<Contato | null>(null)
@@ -76,10 +76,6 @@ export function FormNovaVisita({
       setErro('Escolha o cliente da visita')
       return
     }
-    if (!souAgente && !responsavelId) {
-      setErro('Escolha o vendedor responsável pela visita')
-      return
-    }
     setOcupado(true)
     setErro(null)
     try {
@@ -93,15 +89,13 @@ export function FormNovaVisita({
           // teria de consultar o Zaple por linha.
           contatoNome: escolhido.nome,
           data: prazo || hoje(),
-          // Vazio significa "eu mesmo"; a rota ignora este campo de vendedor.
-          zapleUserId: responsavelId || undefined,
         }),
       })
       if (!r.ok) {
         setErro(await erroDaResposta(r, 'Não foi possível criar a visita'))
         return
       }
-      router.replace('/kanban')
+      router.replace('/agenda')
       router.refresh()
     } catch {
       setErro('Sem conexão. A visita não foi criada.')
@@ -217,30 +211,6 @@ export function FormNovaVisita({
           className="rounded-lg border border-slate-300 bg-white px-4 py-3"
         />
       </label>
-
-      {agentes.length > 0 && (
-        // Atribuir a outro vendedor exige o usuarioId dele no nosso banco, que
-        // este formulário não conhece — só o zapleUserId. Enviar um sem o
-        // outro a rota recusa (de propósito). Volta na Fatia B, com a tela
-        // redesenhada e a lista de usuários vinda do nosso banco.
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-slate-700">
-            Responsável{souAgente ? ' (opcional)' : ''}
-          </span>
-          <select
-            value={responsavelId}
-            onChange={(e) => setResponsavelId(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-3"
-          >
-            <option value="">{souAgente ? 'Eu mesmo' : 'Escolha o vendedor'}</option>
-            {agentes.map((a) => (
-              <option key={a.userId} value={a.userId}>
-                {a.nome}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
 
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Data da visita</span>
