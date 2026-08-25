@@ -24,7 +24,7 @@ describe('POST /api/visitas/[id]/status', () => {
     exigirUsuario.mockReset()
     exigirUsuario.mockResolvedValue({ id: 'u1', papel: 'vendedor', zapleUserId: 'agente-1' })
     buscarVisita.mockReset()
-    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u1' })
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u1', status: 'a_fazer' })
     mudarStatus.mockReset()
     mudarStatus.mockResolvedValue({ id: 'v1', status: 'realizada' })
     sincronizar.mockReset()
@@ -52,10 +52,21 @@ describe('POST /api/visitas/[id]/status', () => {
 
   it('gestor pode marcar visita de qualquer um', async () => {
     exigirUsuario.mockResolvedValue({ id: 'g1', papel: 'gestor', zapleUserId: 'agente-9' })
-    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u2' })
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u2', status: 'a_fazer' })
     const { POST } = await import('@/app/api/visitas/[id]/status/route')
 
     expect((await POST(pedido({ status: 'cancelada' }), { params })).status).toBe(200)
+  })
+
+  it('recusa operar sobre visita já fechada', async () => {
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u1', status: 'realizada' })
+    const { POST } = await import('@/app/api/visitas/[id]/status/route')
+
+    const r = await POST(pedido({ status: 'cancelada' }), { params })
+
+    expect(r.status).toBe(409)
+    // A mutação NÃO pode ter acontecido.
+    expect(mudarStatus).not.toHaveBeenCalled()
   })
 
   it('404 quando a visita não existe', async () => {

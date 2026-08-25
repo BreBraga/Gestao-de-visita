@@ -22,6 +22,7 @@ describe('GET /api/visitas/[id]', () => {
     const r = await GET(new Request('http://local'), { params })
 
     expect(r.status).toBe(200)
+    expect((await r.json()).visita.id).toBe('v1')
   })
 
   it('404 quando a visita não existe', async () => {
@@ -50,5 +51,6 @@ describe('GET /api/visitas/[id]', () => {
     const r = await GET(new Request('http://local'), { params })
 
     expect(r.status).toBe(200)
+    expect((await r.json()).visita.id).toBe('v1')
   })
 })

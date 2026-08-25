@@ -24,7 +24,7 @@ describe('POST /api/visitas/[id]/reagendar', () => {
     exigirUsuario.mockReset()
     exigirUsuario.mockResolvedValue({ id: 'u1', papel: 'vendedor', zapleUserId: 'agente-1' })
     buscarVisita.mockReset()
-    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u1' })
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u1', status: 'a_fazer' })
     reagendarRepo.mockReset()
     reagendarRepo.mockResolvedValue({ fechada: { id: 'v1' }, nova: { id: 'v2' } })
     sincronizar.mockReset()
@@ -52,10 +52,21 @@ describe('POST /api/visitas/[id]/reagendar', () => {
 
   it('gestor pode reagendar visita de qualquer um', async () => {
     exigirUsuario.mockResolvedValue({ id: 'g1', papel: 'gestor', zapleUserId: 'agente-9' })
-    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u2' })
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u2', status: 'a_fazer' })
     const { POST } = await import('@/app/api/visitas/[id]/reagendar/route')
 
     expect((await POST(pedido({ data: '2026-09-01' }), { params })).status).toBe(201)
+  })
+
+  it('recusa operar sobre visita já fechada', async () => {
+    buscarVisita.mockResolvedValue({ id: 'v1', usuarioId: 'u1', status: 'realizada' })
+    const { POST } = await import('@/app/api/visitas/[id]/reagendar/route')
+
+    const r = await POST(pedido({ data: '2026-09-01' }), { params })
+
+    expect(r.status).toBe(409)
+    // A mutação NÃO pode ter acontecido.
+    expect(reagendarRepo).not.toHaveBeenCalled()
   })
 
   it('404 quando a visita não existe', async () => {
@@ -81,6 +92,11 @@ describe('POST /api/visitas/[id]/reagendar', () => {
   })
 
   it('devolve a visita nova, não a fechada', async () => {
+    // A primeira chamada é a checagem de dono (visita original); a segunda é
+    // a releitura pós-sincronismo, que deve trazer a visita nova já sincronizada.
+    buscarVisita
+      .mockResolvedValueOnce({ id: 'v1', usuarioId: 'u1', status: 'a_fazer' })
+      .mockResolvedValueOnce({ id: 'v2', usuarioId: 'u1', cardId: 'card-2', sincronizadoEm: new Date() })
     const { POST } = await import('@/app/api/visitas/[id]/reagendar/route')
 
     const r = await POST(pedido({ data: '2026-09-01' }), { params })
