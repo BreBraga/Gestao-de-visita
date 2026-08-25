@@ -22,23 +22,29 @@ export async function criarBancoDeTeste() {
 }
 
 /**
+ * Contador por processo. Cada arquivo de teste tem seu próprio banco em
+ * memória, então uma sequência simples basta e é imune ao formato do id.
+ */
+let sequencia = 0
+
+/**
  * Um vendedor pronto, porque `visita.usuario_id` tem foreign key.
  *
- * O telefone é derivado do `zapleUserId` porque `usuario.telefone` é unique:
- * com um valor fixo, o segundo vendedor de um mesmo teste estouraria a
- * constraint — e o erro apareceria como falha de banco, não como asserção,
- * mandando quem estiver depurando para o lugar errado.
+ * O telefone vem de um contador, não do `zapleUserId`, porque `usuario.telefone`
+ * é unique e UUID é hexadecimal: derivar dígitos dele (ex.: descartando letras)
+ * colide — `ffffffff-...` e `00000000-...` gerariam o mesmo telefone. O erro
+ * apareceria como falha de banco, não como asserção, mandando quem estiver
+ * depurando para o lugar errado.
  */
 export async function criarUsuarioDeTeste(
   db: Awaited<ReturnType<typeof criarBancoDeTeste>>['db'],
   zapleUserId = '11111111-1111-1111-1111-111111111111'
 ) {
-  const sufixo = zapleUserId.replace(/\D/g, '').slice(0, 9).padEnd(9, '0')
   const [u] = await db
     .insert(schema.usuario)
     .values({
       nome: 'Vendedor de Teste',
-      telefone: `55${sufixo}`,
+      telefone: `5521${String(++sequencia).padStart(9, '0')}`,
       senhaHash: 'nao-importa',
       zapleUserId,
     })
