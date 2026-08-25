@@ -6,6 +6,8 @@ import {
   listarDoDia,
   mudarStatus,
   reagendar,
+  listarNaoSincronizadas,
+  marcarSincronizada,
 } from '@/lib/visita/repositorio'
 import { criarUsuarioDeTeste as criarOutroUsuario } from '../apoio/banco'
 
@@ -210,5 +212,47 @@ describe('reagendar', () => {
     const r = await reagendar(banco.db, '33333333-3333-3333-3333-333333333333', '2026-08-28')
 
     expect(r).toBeNull()
+  })
+})
+
+describe('fila de sincronismo', () => {
+  it('a visita recém-criada está na fila', async () => {
+    await criarVisita(banco.db, entrada())
+
+    const fila = await listarNaoSincronizadas(banco.db)
+
+    expect(fila).toHaveLength(1)
+  })
+
+  it('sai da fila ao ser marcada, guardando o card', async () => {
+    const v = await criarVisita(banco.db, entrada())
+    const CARD = '44444444-4444-4444-4444-444444444444'
+
+    await marcarSincronizada(banco.db, v.id, CARD)
+
+    expect(await listarNaoSincronizadas(banco.db)).toHaveLength(0)
+    const depois = await buscarVisita(banco.db, v.id)
+    expect(depois?.cardId).toBe(CARD)
+    expect(depois?.sincronizadoEm).not.toBeNull()
+  })
+
+  it('volta para a fila quando o status muda, porque a cópia envelheceu', async () => {
+    const v = await criarVisita(banco.db, entrada())
+    await marcarSincronizada(banco.db, v.id, '44444444-4444-4444-4444-444444444444')
+
+    await mudarStatus(banco.db, v.id, 'realizada')
+
+    expect(await listarNaoSincronizadas(banco.db)).toHaveLength(1)
+  })
+
+  it('mantém o card_id ao voltar para a fila — o espelho é o mesmo', async () => {
+    const v = await criarVisita(banco.db, entrada())
+    const CARD = '44444444-4444-4444-4444-444444444444'
+    await marcarSincronizada(banco.db, v.id, CARD)
+    await mudarStatus(banco.db, v.id, 'realizada')
+
+    const depois = await buscarVisita(banco.db, v.id)
+
+    expect(depois?.cardId).toBe(CARD)
   })
 })
