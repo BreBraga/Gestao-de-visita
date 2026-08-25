@@ -1,0 +1,1 @@
+ALTER TABLE "visita" ADD COLUMN "relatorio_no_zaple" text;

@@ -70,6 +70,12 @@ export const visita = pgTable(
     tipo: tipoVisitaEnum('tipo').notNull().default('prospeccao'),
     titulo: text('titulo').notNull(),
     relatorio: text('relatorio'),
+    /**
+     * O texto da última nota que chegou ao Zaple. Serve para não regravar a
+     * mesma nota a cada ressincronização — o card acumularia o mesmo
+     * relatório repetido, e quem abrisse o CRM veria lixo.
+     */
+    relatorioNoZaple: text('relatorio_no_zaple'),
     /** De qual visita esta foi reagendada. Ver `reagendar()`. */
     origemId: uuid('origem_id'),
     /** O card espelho no Zaple. Nulo até a cópia chegar lá. */
