@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import { db as bancoPadrao, visita, type Visita } from '@/lib/db'
 import type * as schema from '@/lib/db/schema'
@@ -46,4 +46,20 @@ export async function criarVisita(db: BancoVisita, entrada: EntradaVisita): Prom
 export async function buscarVisita(db: BancoVisita, id: string): Promise<Visita | null> {
   const [achada] = await db.select().from(visita).where(eq(visita.id, id)).limit(1)
   return achada ?? null
+}
+
+export async function listarDoDia(
+  db: BancoVisita,
+  opcoes: { data: string; usuarioId?: string }
+): Promise<Visita[]> {
+  // Sem usuarioId a consulta não filtra por vendedor: é o "ver todos" do
+  // gestor. Quem chama decide, porque só a rota conhece o papel de quem pediu.
+  const filtros = [eq(visita.data, opcoes.data)]
+  if (opcoes.usuarioId) filtros.push(eq(visita.usuarioId, opcoes.usuarioId))
+
+  return db
+    .select()
+    .from(visita)
+    .where(and(...filtros))
+    .orderBy(asc(visita.criadaEm))
 }
