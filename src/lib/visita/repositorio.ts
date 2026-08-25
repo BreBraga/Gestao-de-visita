@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, isNull } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import { db as bancoPadrao, visita, type Visita } from '@/lib/db'
 import type * as schema from '@/lib/db/schema'
@@ -118,4 +118,20 @@ export async function reagendar(
     .returning()
 
   return { fechada, nova }
+}
+
+export async function listarNaoSincronizadas(db: BancoVisita): Promise<Visita[]> {
+  return db
+    .select()
+    .from(visita)
+    .where(isNull(visita.sincronizadoEm))
+    .orderBy(asc(visita.criadaEm))
+}
+
+export async function marcarSincronizada(
+  db: BancoVisita,
+  id: string,
+  cardId: string
+): Promise<void> {
+  await db.update(visita).set({ cardId, sincronizadoEm: new Date() }).where(eq(visita.id, id))
 }
