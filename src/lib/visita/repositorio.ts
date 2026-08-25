@@ -1,0 +1,49 @@
+import { eq } from 'drizzle-orm'
+import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
+import { db as bancoPadrao, visita, type Visita } from '@/lib/db'
+import type * as schema from '@/lib/db/schema'
+
+/**
+ * A conexão entra por parâmetro para o teste injetar o Postgres em memória.
+ * Em produção quem chama passa `bancoPadrao`, exportado aqui como `db`.
+ *
+ * O tipo é o `PgDatabase` genérico, e não `typeof bancoPadrao`, porque cada
+ * driver do Drizzle carrega o próprio `QueryResultHKT`: o tipo da conexão de
+ * produção (postgres-js) recusa a de teste (PGlite) em tempo de compilação,
+ * mesmo com as duas sendo Drizzle válidas. O Vitest não type-checa, então o
+ * teste passaria e só o `next build` quebraria — longe daqui.
+ */
+export type BancoVisita = PgDatabase<PgQueryResultHKT, typeof schema>
+
+export { bancoPadrao as db }
+
+export type EntradaVisita = {
+  contatoId: string
+  contatoNome: string
+  usuarioId: string
+  zapleUserId: string
+  data: string
+  titulo: string
+  tipo?: 'prospeccao' | 'recorrente'
+}
+
+export async function criarVisita(db: BancoVisita, entrada: EntradaVisita): Promise<Visita> {
+  const [criada] = await db
+    .insert(visita)
+    .values({
+      contatoId: entrada.contatoId,
+      contatoNome: entrada.contatoNome,
+      usuarioId: entrada.usuarioId,
+      zapleUserId: entrada.zapleUserId,
+      data: entrada.data,
+      titulo: entrada.titulo,
+      tipo: entrada.tipo ?? 'prospeccao',
+    })
+    .returning()
+  return criada
+}
+
+export async function buscarVisita(db: BancoVisita, id: string): Promise<Visita | null> {
+  const [achada] = await db.select().from(visita).where(eq(visita.id, id)).limit(1)
+  return achada ?? null
+}
