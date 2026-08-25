@@ -97,27 +97,33 @@ export async function reagendar(
   // adiamentos, mas apagaria quando cada um aconteceu — e é justamente essa
   // data original que mostra se o vendedor está empurrando cliente com a
   // barriga.
-  const [fechada] = await db
-    .update(visita)
-    .set({ status: 'reagendada', atualizadaEm: new Date(), sincronizadoEm: null })
-    .where(eq(visita.id, id))
-    .returning()
+  //
+  // As duas escritas são uma coisa só: se o INSERT falhasse depois do UPDATE,
+  // a visita original ficaria `reagendada` sem substituta e sumiria da agenda
+  // do vendedor — um cliente perdido sem ninguém perceber.
+  return db.transaction(async (tx) => {
+    const [fechada] = await tx
+      .update(visita)
+      .set({ status: 'reagendada', atualizadaEm: new Date(), sincronizadoEm: null })
+      .where(eq(visita.id, id))
+      .returning()
 
-  const [nova] = await db
-    .insert(visita)
-    .values({
-      contatoId: original.contatoId,
-      contatoNome: original.contatoNome,
-      usuarioId: original.usuarioId,
-      zapleUserId: original.zapleUserId,
-      data: novaData,
-      titulo: original.titulo,
-      tipo: original.tipo,
-      origemId: original.id,
-    })
-    .returning()
+    const [nova] = await tx
+      .insert(visita)
+      .values({
+        contatoId: original.contatoId,
+        contatoNome: original.contatoNome,
+        usuarioId: original.usuarioId,
+        zapleUserId: original.zapleUserId,
+        data: novaData,
+        titulo: original.titulo,
+        tipo: original.tipo,
+        origemId: original.id,
+      })
+      .returning()
 
-  return { fechada, nova }
+    return { fechada, nova }
+  })
 }
 
 export async function listarNaoSincronizadas(db: BancoVisita): Promise<Visita[]> {

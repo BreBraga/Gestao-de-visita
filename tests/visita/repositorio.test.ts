@@ -163,6 +163,25 @@ describe('mudarStatus', () => {
 
     expect(alterada).toBeNull()
   })
+
+  it('preserva o relatório existente quando não recebe um novo', async () => {
+    const v = await criarVisita(banco.db, entrada())
+    await mudarStatus(banco.db, v.id, 'realizada', 'Cliente fechou 3 carros')
+
+    const depois = await mudarStatus(banco.db, v.id, 'cancelada')
+
+    // `undefined` preserva o que já estava lá; só `null` apagaria.
+    expect(depois?.relatorio).toBe('Cliente fechou 3 carros')
+  })
+
+  it('apaga o relatório quando recebe null explícito', async () => {
+    const v = await criarVisita(banco.db, entrada())
+    await mudarStatus(banco.db, v.id, 'realizada', 'texto qualquer')
+
+    const depois = await mudarStatus(banco.db, v.id, 'cancelada', null)
+
+    expect(depois?.relatorio).toBeNull()
+  })
 })
 
 describe('reagendar', () => {
@@ -212,6 +231,16 @@ describe('reagendar', () => {
     const r = await reagendar(banco.db, '33333333-3333-3333-3333-333333333333', '2026-08-28')
 
     expect(r).toBeNull()
+  })
+
+  it('devolve as duas visitas para a fila de sincronismo', async () => {
+    const v = await criarVisita(banco.db, entrada())
+    await marcarSincronizada(banco.db, v.id, '44444444-4444-4444-4444-444444444444')
+
+    await reagendar(banco.db, v.id, '2026-08-28')
+
+    // A original mudou de status e a nova nem existia: as duas precisam ir ao Zaple.
+    expect(await listarNaoSincronizadas(banco.db)).toHaveLength(2)
   })
 })
 
