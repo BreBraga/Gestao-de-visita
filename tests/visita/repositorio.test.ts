@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { criarBancoDeTeste, criarUsuarioDeTeste } from '../apoio/banco'
-import { criarVisita, buscarVisita, listarDoDia, mudarStatus } from '@/lib/visita/repositorio'
+import {
+  criarVisita,
+  buscarVisita,
+  listarDoDia,
+  mudarStatus,
+  reagendar,
+} from '@/lib/visita/repositorio'
 import { criarUsuarioDeTeste as criarOutroUsuario } from '../apoio/banco'
 
 const CONTATO = '22222222-2222-2222-2222-222222222222'
@@ -154,5 +160,55 @@ describe('mudarStatus', () => {
     )
 
     expect(alterada).toBeNull()
+  })
+})
+
+describe('reagendar', () => {
+  it('fecha a original como reagendada e cria uma nova a fazer', async () => {
+    const v = await criarVisita(banco.db, entrada({ data: '2026-08-25' }))
+
+    const r = await reagendar(banco.db, v.id, '2026-08-28')
+
+    expect(r?.fechada.status).toBe('reagendada')
+    expect(r?.fechada.data).toBe('2026-08-25')
+    expect(r?.nova.status).toBe('a_fazer')
+    expect(r?.nova.data).toBe('2026-08-28')
+  })
+
+  it('liga a nova à original, para o histórico não se perder', async () => {
+    const v = await criarVisita(banco.db, entrada())
+
+    const r = await reagendar(banco.db, v.id, '2026-08-28')
+
+    expect(r?.nova.origemId).toBe(v.id)
+  })
+
+  it('leva cliente, vendedor, título e tipo para a visita nova', async () => {
+    const v = await criarVisita(banco.db, entrada({ tipo: 'recorrente', titulo: 'AUTOCAR' }))
+
+    const r = await reagendar(banco.db, v.id, '2026-08-28')
+
+    expect(r?.nova.contatoId).toBe(v.contatoId)
+    expect(r?.nova.contatoNome).toBe(v.contatoNome)
+    expect(r?.nova.usuarioId).toBe(v.usuarioId)
+    expect(r?.nova.tipo).toBe('recorrente')
+    expect(r?.nova.titulo).toBe('AUTOCAR')
+  })
+
+  it('a visita reagendada some da agenda do dia original', async () => {
+    const v = await criarVisita(banco.db, entrada({ data: '2026-08-25' }))
+    await reagendar(banco.db, v.id, '2026-08-28')
+
+    const doDia = await listarDoDia(banco.db, { data: '2026-08-25' })
+
+    // Continua na tabela para o dashboard contar, mas com status reagendada.
+    expect(doDia).toHaveLength(1)
+    expect(doDia[0].status).toBe('reagendada')
+  })
+
+  it('devolve null para id que não existe', async () => {
+    const r = await reagendar(banco.db, '33333333-3333-3333-3333-333333333333', '2026-08-28')
+
+    expect(r).toBeNull()
   })
 })

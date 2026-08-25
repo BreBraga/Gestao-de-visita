@@ -84,3 +84,38 @@ export async function mudarStatus(
     .returning()
   return alterada ?? null
 }
+
+export async function reagendar(
+  db: BancoVisita,
+  id: string,
+  novaData: string
+): Promise<{ fechada: Visita; nova: Visita } | null> {
+  const original = await buscarVisita(db, id)
+  if (!original) return null
+
+  // Duas linhas, não uma. Mudar a data na mesma linha geraria o número de
+  // adiamentos, mas apagaria quando cada um aconteceu — e é justamente essa
+  // data original que mostra se o vendedor está empurrando cliente com a
+  // barriga.
+  const [fechada] = await db
+    .update(visita)
+    .set({ status: 'reagendada', atualizadaEm: new Date(), sincronizadoEm: null })
+    .where(eq(visita.id, id))
+    .returning()
+
+  const [nova] = await db
+    .insert(visita)
+    .values({
+      contatoId: original.contatoId,
+      contatoNome: original.contatoNome,
+      usuarioId: original.usuarioId,
+      zapleUserId: original.zapleUserId,
+      data: novaData,
+      titulo: original.titulo,
+      tipo: original.tipo,
+      origemId: original.id,
+    })
+    .returning()
+
+  return { fechada, nova }
+}
