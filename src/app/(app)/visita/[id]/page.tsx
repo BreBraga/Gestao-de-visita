@@ -1,29 +1,29 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { exigirUsuario } from '@/lib/auth/atual'
-import { obterVisita } from '@/lib/zaple/visitas'
-import { ZapleError } from '@/lib/zaple/erros'
+import { buscarVisita, db } from '@/lib/visita/repositorio'
 
 export const dynamic = 'force-dynamic'
 
-function formatarData(iso: string | null): string {
-  if (!iso) return '—'
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(iso))
+function formatarData(data: Date | string | null): string {
+  if (!data) return '—'
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(data))
 }
 
 export default async function DetalheVisita({ params }: PageProps<'/visita/[id]'>) {
   const u = await exigirUsuario()
   const { id } = await params
 
-  let visita
-  try {
-    visita = await obterVisita(id)
-  } catch (erro) {
-    if (erro instanceof ZapleError && erro.naoEncontrado) notFound()
-    throw erro
-  }
+  const visita = await buscarVisita(db, id)
+  if (!visita) notFound()
 
-  if (u.papel !== 'gestor' && visita.responsavelId !== u.zapleUserId) notFound()
+  if (u.papel !== 'gestor' && visita.usuarioId !== u.id) notFound()
+
+  // O Zaple calculava isto; agora a data é nossa, então a conta é aqui.
+  // Só `a_fazer` pode estar atrasada — uma visita realizada ontem não está
+  // atrasada, está feita.
+  const hoje = new Date().toISOString().slice(0, 10)
+  const atrasada = visita.status === 'a_fazer' && visita.data < hoje
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 p-4">
@@ -32,25 +32,21 @@ export default async function DetalheVisita({ params }: PageProps<'/visita/[id]'
       </Link>
 
       <header>
-        <p className="text-xs uppercase tracking-wide text-slate-500">{visita.chave}</p>
+        <p className="text-xs uppercase tracking-wide text-slate-500">{visita.contatoNome}</p>
         <h1 className="text-xl font-semibold">{visita.titulo}</h1>
-        <p className="mt-1 text-sm text-slate-500">{visita.etapaTitulo}</p>
+        <p className="mt-1 text-sm text-slate-500">{visita.status}</p>
       </header>
 
       <dl className="grid grid-cols-2 gap-4 rounded-lg border border-slate-200 bg-white p-4 text-sm">
         <div>
           <dt className="text-slate-500">Cliente</dt>
-          <dd className="font-medium">{visita.contatos[0]?.nome ?? '—'}</dd>
+          <dd className="font-medium">{visita.contatoNome}</dd>
         </div>
         <div>
-          <dt className="text-slate-500">Responsável</dt>
-          <dd className="font-medium">{visita.responsavelNome ?? '—'}</dd>
-        </div>
-        <div>
-          <dt className="text-slate-500">Prazo</dt>
-          <dd className={visita.atrasada ? 'font-medium text-red-600' : 'font-medium'}>
-            {formatarData(visita.prazo)}
-            {visita.atrasada && ' · atrasada'}
+          <dt className="text-slate-500">Data</dt>
+          <dd className={atrasada ? 'font-medium text-red-600' : 'font-medium'}>
+            {formatarData(visita.data)}
+            {atrasada && ' · atrasada'}
           </dd>
         </div>
         <div>
@@ -59,10 +55,10 @@ export default async function DetalheVisita({ params }: PageProps<'/visita/[id]'
         </div>
       </dl>
 
-      {visita.descricao && (
+      {visita.relatorio && (
         <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-2 text-sm font-medium text-slate-500">Observações</h2>
-          <p className="whitespace-pre-wrap text-sm">{visita.descricao}</p>
+          <h2 className="mb-2 text-sm font-medium text-slate-500">Relatório</h2>
+          <p className="whitespace-pre-wrap text-sm">{visita.relatorio}</p>
         </section>
       )}
 

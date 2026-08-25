@@ -1,57 +1,71 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const exigirUsuario = vi.fn()
-const listarVisitas = vi.fn()
-const criarVisita = vi.fn()
-const listarEtapas = vi.fn()
+const listarDoDia = vi.fn()
 
 vi.mock('@/lib/auth/atual', () => ({ exigirUsuario, exigirGestor: vi.fn(), usuarioAtual: vi.fn() }))
-vi.mock('@/lib/zaple/visitas', () => ({ listarVisitas, criarVisita }))
-vi.mock('@/lib/zaple/painel', () => ({ listarEtapas, painelId: () => 'p1' }))
+vi.mock('@/lib/visita/repositorio', () => ({
+  listarDoDia,
+  criarVisita: vi.fn(),
+  db: {},
+}))
+vi.mock('@/lib/visita/sincronizador', () => ({ sincronizar: vi.fn() }))
 
-const VENDEDOR = { id: 'u1', papel: 'vendedor', zapleUserId: 'agente-1' }
-const GESTOR = { id: 'g1', papel: 'gestor', zapleUserId: 'agente-9' }
+function pedido(query = '') {
+  return new Request(`http://local/api/visitas${query}`)
+}
 
 describe('GET /api/visitas', () => {
   beforeEach(() => {
     exigirUsuario.mockReset()
-    listarVisitas.mockReset()
-    listarVisitas.mockResolvedValue({ itens: [], total: 0, temMais: false })
+    exigirUsuario.mockResolvedValue({ id: 'u1', papel: 'vendedor', zapleUserId: 'agente-1' })
+    listarDoDia.mockReset()
+    listarDoDia.mockResolvedValue([])
   })
 
-  it('vendedor só recebe as visitas dele', async () => {
-    exigirUsuario.mockResolvedValue(VENDEDOR)
+  it('filtra pelo próprio vendedor', async () => {
     const { GET } = await import('@/app/api/visitas/route')
 
-    await GET(new Request('http://local/api/visitas'))
+    await GET(pedido('?data=2026-08-25'))
 
-    expect(listarVisitas).toHaveBeenCalledWith(expect.objectContaining({ responsavelId: 'agente-1' }))
+    expect(listarDoDia).toHaveBeenCalledWith(
+      expect.anything(),
+      { data: '2026-08-25', usuarioId: 'u1' }
+    )
   })
 
-  it('vendedor não escapa do filtro pedindo todos', async () => {
-    exigirUsuario.mockResolvedValue(VENDEDOR)
+  it('gestor com todos=1 vê a agenda inteira', async () => {
+    exigirUsuario.mockResolvedValue({ id: 'g1', papel: 'gestor', zapleUserId: 'agente-9' })
     const { GET } = await import('@/app/api/visitas/route')
 
-    await GET(new Request('http://local/api/visitas?todos=1'))
+    await GET(pedido('?data=2026-08-25&todos=1'))
 
-    expect(listarVisitas).toHaveBeenCalledWith(expect.objectContaining({ responsavelId: 'agente-1' }))
+    expect(listarDoDia).toHaveBeenCalledWith(
+      expect.anything(),
+      { data: '2026-08-25', usuarioId: undefined }
+    )
   })
 
-  it('gestor pedindo todos vê o painel inteiro', async () => {
-    exigirUsuario.mockResolvedValue(GESTOR)
+  it('vendedor que force todos=1 continua vendo só as próprias', async () => {
     const { GET } = await import('@/app/api/visitas/route')
 
-    await GET(new Request('http://local/api/visitas?todos=1'))
+    await GET(pedido('?data=2026-08-25&todos=1'))
 
-    expect(listarVisitas).toHaveBeenCalledWith(expect.objectContaining({ responsavelId: undefined }))
+    expect(listarDoDia).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ usuarioId: 'u1' })
+    )
   })
 
-  it('gestor sem pedir todos vê apenas as próprias', async () => {
-    exigirUsuario.mockResolvedValue(GESTOR)
+  it('sem data na query, usa hoje', async () => {
     const { GET } = await import('@/app/api/visitas/route')
 
-    await GET(new Request('http://local/api/visitas'))
+    await GET(pedido())
 
-    expect(listarVisitas).toHaveBeenCalledWith(expect.objectContaining({ responsavelId: 'agente-9' }))
+    const hoje = new Date().toISOString().slice(0, 10)
+    expect(listarDoDia).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ data: hoje })
+    )
   })
 })
