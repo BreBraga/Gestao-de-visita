@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Agente, Contato } from '@/lib/zaple/tipos'
 import { erroDaResposta } from '@/lib/api/cliente'
+import { hoje } from '@/lib/visita/datas'
 
 /** `agentes` vem vazio para vendedor: a visita é sempre dele. */
 export function FormNovaVisita({
@@ -88,10 +89,12 @@ export function FormNovaVisita({
         body: JSON.stringify({
           titulo,
           contatoId: escolhido.id,
+          // A rota congela o nome do cliente na visita: sem ele, o dashboard
+          // teria de consultar o Zaple por linha.
+          contatoNome: escolhido.nome,
+          data: prazo || hoje(),
           // Vazio significa "eu mesmo"; a rota ignora este campo de vendedor.
-          responsavelId: responsavelId || undefined,
-          // O meio-dia evita que o fuso empurre o prazo para o dia anterior.
-          prazo: prazo ? new Date(prazo + 'T12:00:00').toISOString() : undefined,
+          zapleUserId: responsavelId || undefined,
         }),
       })
       if (!r.ok) {
@@ -216,6 +219,10 @@ export function FormNovaVisita({
       </label>
 
       {agentes.length > 0 && (
+        // Atribuir a outro vendedor exige o usuarioId dele no nosso banco, que
+        // este formulário não conhece — só o zapleUserId. Enviar um sem o
+        // outro a rota recusa (de propósito). Volta na Fatia B, com a tela
+        // redesenhada e a lista de usuários vinda do nosso banco.
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">
             Responsável{souAgente ? ' (opcional)' : ''}
@@ -236,8 +243,9 @@ export function FormNovaVisita({
       )}
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-700">Prazo (opcional)</span>
+        <span className="text-sm font-medium text-slate-700">Data da visita</span>
         <input
+          required
           type="date"
           value={prazo}
           onChange={(e) => setPrazo(e.target.value)}

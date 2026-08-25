@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { hoje } from '@/lib/visita/datas'
 
 const exigirUsuario = vi.fn()
 const listarDoDia = vi.fn()
@@ -62,10 +63,9 @@ describe('GET /api/visitas', () => {
 
     await GET(pedido())
 
-    const hoje = new Date().toISOString().slice(0, 10)
     expect(listarDoDia).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ data: hoje })
+      expect.objectContaining({ data: hoje() })
     )
   })
 })

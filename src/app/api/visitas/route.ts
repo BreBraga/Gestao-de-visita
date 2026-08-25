@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { exigirUsuario } from '@/lib/auth/atual'
 import { criarVisita, listarDoDia, db } from '@/lib/visita/repositorio'
 import { sincronizar } from '@/lib/visita/sincronizador'
+import { hoje } from '@/lib/visita/datas'
 
 /** 'YYYY-MM-DD'. String, não Date: o fuso não pode mover a visita de dia. */
 const DataISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve ser AAAA-MM-DD')
@@ -10,7 +11,12 @@ export async function GET(req: Request) {
   const u = await exigirUsuario()
   const url = new URL(req.url)
 
-  const data = url.searchParams.get('data') ?? new Date().toISOString().slice(0, 10)
+  const bruta = url.searchParams.get('data')
+  const analisadaData = bruta ? DataISO.safeParse(bruta) : null
+  if (bruta && !analisadaData!.success) {
+    return Response.json({ erro: 'Data deve ser AAAA-MM-DD' }, { status: 400 })
+  }
+  const data = bruta ?? hoje()
   const todos = url.searchParams.get('todos') === '1' && u.papel === 'gestor'
 
   const visitas = await listarDoDia(db, { data, usuarioId: todos ? undefined : u.id })
@@ -33,6 +39,16 @@ export async function POST(req: Request) {
   const analisado = NovaEntrada.safeParse(await req.json().catch(() => null))
   if (!analisado.success) {
     return Response.json({ erro: 'Informe cliente, título e data' }, { status: 400 })
+  }
+
+  // Um dos dois sem o outro é ambíguo: decidir por conta própria criaria a
+  // visita no nome errado sem ninguém perceber.
+  const { usuarioId, zapleUserId } = analisado.data
+  if ((usuarioId && !zapleUserId) || (!usuarioId && zapleUserId)) {
+    return Response.json(
+      { erro: 'Para atribuir a outro vendedor, informe usuarioId e zapleUserId juntos' },
+      { status: 400 }
+    )
   }
 
   // Só o gestor cria visita para outra pessoa.

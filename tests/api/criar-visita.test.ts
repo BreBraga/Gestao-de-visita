@@ -122,4 +122,23 @@ describe('POST /api/visitas', () => {
       expect.objectContaining({ usuarioId: 'u1', zapleUserId: 'agente-1' })
     )
   })
+
+  it('recusa usuarioId sem zapleUserId (ou vice-versa) em vez de decidir sozinho', async () => {
+    exigirUsuario.mockResolvedValue({ id: 'g1', papel: 'gestor', zapleUserId: 'agente-9' })
+    const { POST } = await import('@/app/api/visitas/route')
+
+    const r = await POST(
+      pedido({
+        titulo: 'X',
+        contatoId: CONTATO,
+        contatoNome: 'X',
+        data: '2026-08-25',
+        usuarioId: USUARIO_OUTRO,
+        // zapleUserId ausente de propósito
+      })
+    )
+
+    expect(r.status).toBe(400)
+    expect(criarVisitaRepo).not.toHaveBeenCalled()
+  })
 })
