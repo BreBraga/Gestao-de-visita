@@ -19,3 +19,17 @@ export function formatarDia(data: string): string {
   const [ano, mes, dia] = data.split('-')
   return `${dia}/${mes}/${ano}`
 }
+
+/**
+ * Soma (ou subtrai) dias de uma data 'YYYY-MM-DD'.
+ *
+ * A conta roda inteira em UTC de propósito: `new Date('2026-08-25')` é
+ * meia-noite UTC, e somar dias no fuso local faria a data escorregar um dia
+ * em UTC-3 — o mesmo erro que esta fatia já corrigiu duas vezes.
+ */
+export function somarDias(data: string, dias: number): string {
+  const [ano, mes, dia] = data.split('-').map(Number)
+  const d = new Date(Date.UTC(ano, mes - 1, dia))
+  d.setUTCDate(d.getUTCDate() + dias)
+  return d.toISOString().slice(0, 10)
+}
