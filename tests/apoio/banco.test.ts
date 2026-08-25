@@ -24,4 +24,14 @@ describe('banco de teste', () => {
     expect(v.sincronizadoEm).toBeNull()
     await fechar()
   })
+
+  it('gera telefones diferentes para dois usuários, mesmo com uuids que colidem na derivação por dígitos', async () => {
+    const { db, fechar } = await criarBancoDeTeste()
+
+    const u1 = await criarUsuarioDeTeste(db, 'ffffffff-ffff-ffff-ffff-ffffffffffff')
+    const u2 = await criarUsuarioDeTeste(db, '00000000-0000-0000-0000-000000000000')
+
+    expect(u1.telefone).not.toBe(u2.telefone)
+    await fechar()
+  })
 })
