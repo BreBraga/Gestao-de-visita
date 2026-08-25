@@ -158,3 +158,12 @@ export async function atualizarVisita(id: string, patch: PatchVisita): Promise<V
 export function moverEtapa(id: string, etapaId: string): Promise<Visita> {
   return atualizarVisita(id, { etapaId })
 }
+
+/**
+ * Grava a nota do relatório no card. É o único jeito de a anotação chegar ao
+ * Zaple: verificado em 2026-08-25, não existe endpoint de nota em contato —
+ * as quatro variações testadas respondem 404.
+ */
+export async function gravarNota(cardId: string, texto: string): Promise<void> {
+  await zaplePost(`/crm/v1/panel/card/${cardId}/note`, { text: texto })
+}
