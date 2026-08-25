@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/**
+ * Sistema visual do app de campo.
+ *
+ * O usuário é um vendedor na rua: celular na mão, sol na tela, olhando por
+ * dois segundos entre um cliente e outro. Isso manda em tudo aqui — contraste
+ * alto, alvos de toque grandes, e status legível sem ler palavra nenhuma.
+ *
+ * O tema é claro e só claro. O template do create-next-app trazia um
+ * `prefers-color-scheme: dark` que pintava o fundo de #0a0a0a enquanto os
+ * componentes usavam cores de fundo claro — quem tinha o sistema em modo
+ * escuro via texto cinza sobre preto. Tema escuro de verdade exige paleta
+ * própria, não a inversão automática do fundo.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  /* Asfalto molhado: o azul-petróleo do cabeçalho. Não é preto — preto
+     achata, e esta cor precisa ter profundidade sob luz forte. */
+  --color-asfalto: #0f1e2b;
+  --color-asfalto-claro: #1b3245;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Névoa: o fundo. Cinza com uma gota de azul, para o branco dos cards
+     aparecer como objeto e não se dissolver na página. */
+  --color-nevoa: #eef2f6;
+
+  /* Status em código de trânsito: é o único sistema de cores que quem dirige
+     o dia inteiro lê antes de pensar.
+
+     Cancelada é CINZA, não vermelha, de propósito: cancelar uma visita não é
+     erro nem alarme, é um desfecho. Gastar vermelho nela deixaria a tela em
+     estado de emergência permanente e roubaria a atenção de quem realmente
+     precisa dela. */
+  --color-fazer: #1f6fb2;
+  --color-feita: #0e8a5f;
+  --color-adiada: #d98a0b;
+  --color-morta: #94a3b8;
+
+  --font-display: var(--font-barlow-condensed), system-ui, sans-serif;
+  --font-sans: var(--font-barlow), system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* O vendedor está em movimento e erra o alvo. Nada clicável abaixo de 44px. */
+@media (pointer: coarse) {
+  button,
+  a[role='button'] {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

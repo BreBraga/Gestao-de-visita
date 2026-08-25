@@ -42,7 +42,21 @@ export const statusVisitaEnum = pgEnum('status_visita', [
   'reagendada',
 ])
 
-export const tipoVisitaEnum = pgEnum('tipo_visita', ['prospeccao', 'recorrente'])
+/**
+ * Por que o vendedor está indo até esse cliente.
+ *
+ * `recorrente` é o nome antigo de `manutencao` e continua no enum porque as
+ * linhas já gravadas o usam — remover valor de enum no Postgres exige recriar
+ * o tipo e reescrever a tabela. A interface só oferece os cinco de baixo.
+ */
+export const tipoVisitaEnum = pgEnum('tipo_visita', [
+  'prospeccao',
+  'manutencao',
+  'pedido',
+  'entrega',
+  'outro',
+  'recorrente',
+])
 
 /**
  * A visita mora aqui, não no Zaple. O card de lá é cópia: se a API estiver
@@ -69,6 +83,9 @@ export const visita = pgTable(
     status: statusVisitaEnum('status').notNull().default('a_fazer'),
     tipo: tipoVisitaEnum('tipo').notNull().default('prospeccao'),
     titulo: text('titulo').notNull(),
+    /** O motivo da visita, escrito antes de ir. */
+    descricao: text('descricao'),
+    /** O que foi tratado com o cliente. Exigido ao marcar como realizada. */
     relatorio: text('relatorio'),
     /**
      * O texto da última nota que chegou ao Zaple. Serve para não regravar a
