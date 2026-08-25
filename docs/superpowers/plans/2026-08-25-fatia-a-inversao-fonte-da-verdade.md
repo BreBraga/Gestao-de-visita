@@ -272,7 +272,21 @@ export async function criarBancoDeTeste() {
   }
 }
 
-/** Um vendedor pronto, porque `visita.usuario_id` tem foreign key. */
+/**
+ * Contador por processo. Cada arquivo de teste tem seu próprio banco em
+ * memória, então uma sequência simples basta e é imune ao formato do id.
+ */
+let sequencia = 0
+
+/**
+ * Um vendedor pronto, porque `visita.usuario_id` tem foreign key.
+ *
+ * O telefone vem de um contador, não do `zapleUserId`, porque
+ * `usuario.telefone` é unique e UUID é hexadecimal: derivar do id descartando
+ * as letras faria `ffffffff-…` e `00000000-…` virarem o mesmo telefone — e o
+ * segundo vendedor do teste morreria com erro de constraint em vez de falha
+ * de asserção, mandando quem depura para o lugar errado.
+ */
 export async function criarUsuarioDeTeste(
   db: Awaited<ReturnType<typeof criarBancoDeTeste>>['db'],
   zapleUserId = '11111111-1111-1111-1111-111111111111'
@@ -281,7 +295,7 @@ export async function criarUsuarioDeTeste(
     .insert(schema.usuario)
     .values({
       nome: 'Vendedor de Teste',
-      telefone: '5521999999999',
+      telefone: `5521${String(++sequencia).padStart(9, '0')}`,
       senhaHash: 'nao-importa',
       zapleUserId,
     })
@@ -449,13 +463,21 @@ Crie `src/lib/visita/repositorio.ts`:
 
 ```ts
 import { eq } from 'drizzle-orm'
+import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import { db as bancoPadrao, visita, type Visita } from '@/lib/db'
+import type * as schema from '@/lib/db/schema'
 
 /**
  * A conexão entra por parâmetro para o teste injetar o Postgres em memória.
  * Em produção quem chama passa `bancoPadrao`, exportado aqui como `db`.
+ *
+ * O tipo é o `PgDatabase` genérico, e não `typeof bancoPadrao`, porque cada
+ * driver do Drizzle carrega o próprio `QueryResultHKT`: o tipo da conexão de
+ * produção (postgres-js) recusa a de teste (PGlite) em tempo de compilação,
+ * mesmo com as duas sendo Drizzle válidas. O Vitest não type-checa, então o
+ * teste passaria e só o `next build` quebraria — longe daqui.
  */
-export type BancoVisita = typeof bancoPadrao
+export type BancoVisita = PgDatabase<PgQueryResultHKT, typeof schema>
 
 export { bancoPadrao as db }
 
