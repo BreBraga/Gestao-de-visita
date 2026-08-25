@@ -1,6 +1,6 @@
 import { criarVisita as criarCardZaple, moverEtapa, gravarNota } from '@/lib/zaple/visitas'
 import { listarEtapas } from '@/lib/zaple/painel'
-import { marcarSincronizada, type BancoVisita } from './repositorio'
+import { marcarSincronizada, marcarCard, type BancoVisita } from './repositorio'
 import { etapaParaStatus } from './etapas'
 import type { Visita } from '@/lib/db'
 
@@ -30,12 +30,19 @@ export async function sincronizar(
         titulo: v.titulo,
         responsavelId: v.zapleUserId,
         contatoIds: [v.contatoId],
-        prazo: undefined,
+        // Meio-dia UTC: com 00:00 o fuso do Brasil empurraria o card para o
+        // dia anterior no Zaple.
+        prazo: `${v.data}T12:00:00.000Z`,
       })
       cardId = card.id
+      // Persistir agora, e não só no fim: se a nota ou a movimentação falhar,
+      // a próxima tentativa reusa este card em vez de criar outro.
+      await marcarCard(db, v.id, cardId)
     }
 
-    if (v.relatorio) await gravarNota(cardId, v.relatorio)
+    // Só grava se o texto mudou desde a última vez que chegou lá.
+    const notaMudou = !!v.relatorio && v.relatorio !== v.relatorioNoZaple
+    if (notaMudou) await gravarNota(cardId, v.relatorio!)
 
     // A etapa pode não existir: o painel é configurado por gente, e enquanto
     // não for renomeado não há "Cancelada" lá. Não mover é aceitável; travar
@@ -48,7 +55,7 @@ export async function sincronizar(
       await moverEtapa(cardId, destino.id)
     }
 
-    await marcarSincronizada(db, v.id, cardId)
+    await marcarSincronizada(db, v.id, cardId, notaMudou ? v.relatorio : undefined)
     return { ok: true }
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : 'Falha ao falar com o Zaple' }

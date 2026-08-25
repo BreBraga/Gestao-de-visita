@@ -74,7 +74,11 @@ describe('sincronizar', () => {
 
     expect(r.ok).toBe(true)
     expect(criarCardZaple).toHaveBeenCalledWith(
-      expect.objectContaining({ responsavelId: zapleUserId, contatoIds: [v.contatoId] })
+      expect.objectContaining({
+        responsavelId: zapleUserId,
+        contatoIds: [v.contatoId],
+        prazo: '2026-08-25T12:00:00.000Z',
+      })
     )
     const depois = await buscarVisita(banco.db, v.id)
     expect(depois?.cardId).toBe('44444444-4444-4444-4444-444444444444')
@@ -139,5 +143,37 @@ describe('sincronizar', () => {
     const r = await sincronizar(banco.db, v)
 
     expect(r.ok).toBe(false)
+  })
+
+  it('não cria card novo quando uma tentativa anterior falhou depois de criá-lo', async () => {
+    gravarNota.mockRejectedValueOnce(new Error('500 transitório'))
+    const v = await criarVisita(banco.db, nova())
+    const comRelatorio = await mudarStatus(banco.db, v.id, 'realizada', 'Primeiro relatório')
+
+    const primeira = await sincronizar(banco.db, comRelatorio!)
+    expect(primeira.ok).toBe(false)
+
+    // O card foi criado antes da falha e precisa ter sido guardado.
+    const meio = await buscarVisita(banco.db, v.id)
+    expect(meio?.cardId).toBe('44444444-4444-4444-4444-444444444444')
+
+    criarCardZaple.mockClear()
+    await sincronizar(banco.db, meio!)
+
+    expect(criarCardZaple).not.toHaveBeenCalled()
+  })
+
+  it('não regrava a mesma nota quando a visita ressincroniza', async () => {
+    const v = await criarVisita(banco.db, nova())
+    const realizada = await mudarStatus(banco.db, v.id, 'realizada', 'Fechou negócio')
+    await sincronizar(banco.db, realizada!)
+    expect(gravarNota).toHaveBeenCalledTimes(1)
+
+    // Cancelar zera o sincronismo e traz a visita de volta para a fila.
+    const cancelada = await mudarStatus(banco.db, v.id, 'cancelada')
+    await sincronizar(banco.db, cancelada!)
+
+    // O texto não mudou: o Zaple não pode receber a nota de novo.
+    expect(gravarNota).toHaveBeenCalledTimes(1)
   })
 })

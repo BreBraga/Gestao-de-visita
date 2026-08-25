@@ -137,7 +137,26 @@ export async function listarNaoSincronizadas(db: BancoVisita): Promise<Visita[]>
 export async function marcarSincronizada(
   db: BancoVisita,
   id: string,
-  cardId: string
+  cardId: string,
+  relatorioNoZaple?: string | null
 ): Promise<void> {
-  await db.update(visita).set({ cardId, sincronizadoEm: new Date() }).where(eq(visita.id, id))
+  await db
+    .update(visita)
+    .set({
+      cardId,
+      sincronizadoEm: new Date(),
+      ...(relatorioNoZaple !== undefined ? { relatorioNoZaple } : {}),
+    })
+    .where(eq(visita.id, id))
+}
+
+/**
+ * Grava só o vínculo com o card, sem marcar sincronismo.
+ *
+ * Existe para o sincronizador não perder o card recém-criado se o passo
+ * seguinte falhar: sem isto, cada tentativa criaria um card novo no Zaple e
+ * o painel encheria de órfãos.
+ */
+export async function marcarCard(db: BancoVisita, id: string, cardId: string): Promise<void> {
+  await db.update(visita).set({ cardId }).where(eq(visita.id, id))
 }
