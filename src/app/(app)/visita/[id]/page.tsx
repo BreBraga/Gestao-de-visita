@@ -2,9 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { exigirUsuario } from '@/lib/auth/atual'
 import { buscarVisita, db } from '@/lib/visita/repositorio'
+import { hoje, formatarDia } from '@/lib/visita/datas'
 
 export const dynamic = 'force-dynamic'
 
+/** Para `criadaEm`, que é um timestamp de verdade — não a data pura da visita. */
 function formatarData(data: Date | string | null): string {
   if (!data) return '—'
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(data))
@@ -22,8 +24,7 @@ export default async function DetalheVisita({ params }: PageProps<'/visita/[id]'
   // O Zaple calculava isto; agora a data é nossa, então a conta é aqui.
   // Só `a_fazer` pode estar atrasada — uma visita realizada ontem não está
   // atrasada, está feita.
-  const hoje = new Date().toISOString().slice(0, 10)
-  const atrasada = visita.status === 'a_fazer' && visita.data < hoje
+  const atrasada = visita.status === 'a_fazer' && visita.data < hoje()
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 p-4">
@@ -45,7 +46,7 @@ export default async function DetalheVisita({ params }: PageProps<'/visita/[id]'
         <div>
           <dt className="text-slate-500">Data</dt>
           <dd className={atrasada ? 'font-medium text-red-600' : 'font-medium'}>
-            {formatarData(visita.data)}
+            {formatarDia(visita.data)}
             {atrasada && ' · atrasada'}
           </dd>
         </div>
