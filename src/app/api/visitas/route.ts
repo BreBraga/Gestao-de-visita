@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { exigirUsuario } from '@/lib/auth/atual'
-import { criarVisita, listarDoDia, db } from '@/lib/visita/repositorio'
+import { criarVisita, listarDoDia, buscarVisita, db } from '@/lib/visita/repositorio'
 import { sincronizar } from '@/lib/visita/sincronizador'
 import { hoje } from '@/lib/visita/datas'
 
@@ -69,5 +69,9 @@ export async function POST(req: Request) {
   // não houve erro nenhum.
   await sincronizar(db, criada)
 
-  return Response.json({ visita: criada }, { status: 201 })
+  // Reler porque `sincronizar` grava `card_id` e `sincronizado_em`: devolver o
+  // objeto capturado antes faria a resposta jurar que nada sincronizou.
+  const atualizada = await buscarVisita(db, criada.id)
+
+  return Response.json({ visita: atualizada ?? criada }, { status: 201 })
 }

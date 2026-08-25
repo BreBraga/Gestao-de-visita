@@ -20,9 +20,23 @@ export async function POST(req: Request, { params }: RouteContext<'/api/visitas/
     return Response.json({ erro: 'Essa visita não é sua' }, { status: 403 })
   }
 
+  // Visita fechada não volta atrás. Sem esta guarda, reagendar uma visita já
+  // realizada apagaria o fato de ela ter acontecido e ainda criaria uma
+  // segunda linha — a mesma visita contada duas vezes no dashboard.
+  if (atual.status !== 'a_fazer') {
+    return Response.json(
+      { erro: 'Esta visita já foi fechada. Atualize a tela.' },
+      { status: 409 }
+    )
+  }
+
   const r = await reagendar(db, id, analisado.data.data)
   await sincronizar(db, r!.fechada)
   await sincronizar(db, r!.nova)
 
-  return Response.json({ visita: r!.nova }, { status: 201 })
+  // Reler porque `sincronizar` grava `card_id` e `sincronizado_em`: devolver o
+  // objeto capturado antes faria a resposta jurar que nada sincronizou.
+  const atualizada = await buscarVisita(db, r!.nova.id)
+
+  return Response.json({ visita: atualizada ?? r!.nova }, { status: 201 })
 }

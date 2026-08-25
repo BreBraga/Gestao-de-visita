@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const exigirUsuario = vi.fn()
 const criarVisitaRepo = vi.fn()
+const buscarVisita = vi.fn()
 const sincronizar = vi.fn()
 
 vi.mock('@/lib/auth/atual', () => ({ exigirUsuario, exigirGestor: vi.fn(), usuarioAtual: vi.fn() }))
 vi.mock('@/lib/visita/repositorio', () => ({
   criarVisita: criarVisitaRepo,
   listarDoDia: vi.fn(),
+  buscarVisita,
   db: {},
 }))
 vi.mock('@/lib/visita/sincronizador', () => ({ sincronizar }))
@@ -34,6 +36,8 @@ describe('POST /api/visitas', () => {
     })
     criarVisitaRepo.mockReset()
     criarVisitaRepo.mockResolvedValue({ id: 'v1', titulo: 'AUTOCAR' })
+    buscarVisita.mockReset()
+    buscarVisita.mockResolvedValue({ id: 'v1', titulo: 'AUTOCAR' })
     sincronizar.mockReset()
     sincronizar.mockResolvedValue({ ok: true })
   })
