@@ -10,7 +10,7 @@ export default async function LayoutApp({ children }: LayoutProps<'/'>) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-        <Link href="/kanban" className="font-semibold">
+        <Link href="/agenda" className="font-semibold">
           Visitas
         </Link>
         <div className="flex items-center gap-3 text-sm">
