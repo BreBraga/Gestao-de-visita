@@ -67,6 +67,44 @@ describe('POST /api/visitas', () => {
     expect(r.status).toBe(201)
   })
 
+  // O formulário oferece cinco tipos; a rota aceitava dois. Escolher
+  // "Manutenção" na tela devolvia 400 e o vendedor não conseguia agendar.
+  it('aceita todos os tipos de visita que a tela oferece', async () => {
+    const { POST } = await import('@/app/api/visitas/route')
+
+    for (const tipo of ['prospeccao', 'manutencao', 'pedido', 'entrega', 'outro']) {
+      criarVisitaRepo.mockClear()
+      const r = await POST(
+        pedido({ titulo: 'X', contatoId: CONTATO, contatoNome: 'X', data: '2026-08-25', tipo })
+      )
+
+      expect(r.status, `tipo ${tipo} foi recusado`).toBe(201)
+      expect(criarVisitaRepo).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ tipo })
+      )
+    }
+  })
+
+  it('grava o motivo da visita', async () => {
+    const { POST } = await import('@/app/api/visitas/route')
+
+    await POST(
+      pedido({
+        titulo: 'X',
+        contatoId: CONTATO,
+        contatoNome: 'X',
+        data: '2026-08-25',
+        descricao: 'Levar amostra do filtro novo',
+      })
+    )
+
+    expect(criarVisitaRepo).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ descricao: 'Levar amostra do filtro novo' })
+    )
+  })
+
   it('recusa visita sem cliente', async () => {
     const { POST } = await import('@/app/api/visitas/route')
 

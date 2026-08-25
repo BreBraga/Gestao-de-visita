@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { exigirUsuario } from '@/lib/auth/atual'
 import { criarVisita, listarDoDia, buscarVisita, db } from '@/lib/visita/repositorio'
 import { sincronizar } from '@/lib/visita/sincronizador'
+import { VALORES_TIPO } from '@/lib/visita/tipos'
 import { hoje } from '@/lib/visita/datas'
 
 /** 'YYYY-MM-DD'. String, não Date: o fuso não pode mover a visita de dia. */
@@ -28,7 +29,8 @@ const NovaEntrada = z.object({
   contatoId: z.guid(),
   contatoNome: z.string().min(1),
   data: DataISO,
-  tipo: z.enum(['prospeccao', 'recorrente']).optional(),
+  tipo: z.enum(VALORES_TIPO).optional(),
+  descricao: z.string().trim().max(2000).optional(),
   usuarioId: z.uuid().optional(),
   zapleUserId: z.guid().optional(),
 })
@@ -62,6 +64,7 @@ export async function POST(req: Request) {
     data: analisado.data.data,
     titulo: analisado.data.titulo,
     tipo: analisado.data.tipo,
+    descricao: analisado.data.descricao,
   })
 
   // A visita já existe. O Zaple é cópia: se falhar, `sincronizado_em` fica

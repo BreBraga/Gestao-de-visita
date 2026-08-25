@@ -4,17 +4,9 @@ import { exigirUsuario } from '@/lib/auth/atual'
 import { buscarVisita, buscarSubstituta, historicoDoContato, db } from '@/lib/visita/repositorio'
 import { hoje, formatarDia } from '@/lib/visita/datas'
 import { EditarVisita } from './EditarVisita'
+import { rotuloDoTipo } from '@/lib/visita/tipos'
 
 export const dynamic = 'force-dynamic'
-
-const TIPOS: Record<string, string> = {
-  prospeccao: 'Prospecção',
-  manutencao: 'Manutenção',
-  pedido: 'Pedido',
-  entrega: 'Entrega',
-  outro: 'Outro',
-  recorrente: 'Manutenção',
-}
 
 const STATUS: Record<string, { rotulo: string; faixa: string; texto: string }> = {
   a_fazer: { rotulo: 'A fazer', faixa: 'bg-fazer', texto: 'text-fazer' },
@@ -55,7 +47,7 @@ export default async function DetalheVisita({ params }: PageProps<'/visita/[id]'
             {visita.contatoNome}
           </h1>
           <p className="mt-1 text-slate-500">
-            {TIPOS[visita.tipo] ?? visita.tipo} · {formatarDia(visita.data)}
+            {rotuloDoTipo(visita.tipo)} · {formatarDia(visita.data)}
             {atrasada && <span className="font-semibold text-adiada"> · atrasada</span>}
           </p>
 
@@ -138,7 +130,7 @@ export default async function DetalheVisita({ params }: PageProps<'/visita/[id]'
                   <p className="mt-1 line-clamp-2 text-sm text-slate-600">{h.relatorio}</p>
                 ) : (
                   <p className="mt-1 text-sm text-slate-400">
-                    {TIPOS[h.tipo] ?? h.tipo}
+                    {rotuloDoTipo(h.tipo)}
                     {h.descricao ? ` · ${h.descricao}` : ''}
                   </p>
                 )}

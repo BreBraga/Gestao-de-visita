@@ -4,14 +4,7 @@ import { useRouter } from 'next/navigation'
 import type { Contato } from '@/lib/zaple/tipos'
 import { erroDaResposta } from '@/lib/api/cliente'
 import { hoje } from '@/lib/visita/datas'
-
-const TIPOS = [
-  { valor: 'prospeccao', rotulo: 'Prospecção', ajuda: 'Cliente novo' },
-  { valor: 'manutencao', rotulo: 'Manutenção', ajuda: 'Cliente da carteira' },
-  { valor: 'pedido', rotulo: 'Pedido', ajuda: 'Fechar compra' },
-  { valor: 'entrega', rotulo: 'Entrega', ajuda: 'Levar mercadoria' },
-  { valor: 'outro', rotulo: 'Outro', ajuda: 'Descreva abaixo' },
-] as const
+import { TIPOS_VISITA } from '@/lib/visita/tipos'
 
 /**
  * A visita é sempre de quem está criando.
@@ -227,7 +220,7 @@ export function FormNovaVisita() {
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-semibold">Tipo da visita</legend>
         <div className="grid grid-cols-2 gap-2">
-          {TIPOS.map((t) => (
+          {TIPOS_VISITA.map((t) => (
             <label
               key={t.valor}
               className={`flex cursor-pointer flex-col rounded-xl px-3 py-2.5 ring-1 transition-colors ${

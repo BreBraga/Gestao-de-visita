@@ -3,14 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { erroDaResposta } from '@/lib/api/cliente'
 import type { Visita } from '@/lib/db'
-
-const TIPOS = [
-  { valor: 'prospeccao', rotulo: 'Prospecção' },
-  { valor: 'manutencao', rotulo: 'Manutenção' },
-  { valor: 'pedido', rotulo: 'Pedido' },
-  { valor: 'entrega', rotulo: 'Entrega' },
-  { valor: 'outro', rotulo: 'Outro' },
-] as const
+import { TIPOS_VISITA } from '@/lib/visita/tipos'
 
 /**
  * Editar o que ainda não aconteceu.
@@ -104,7 +97,7 @@ export function EditarVisita({ visita }: { visita: Visita }) {
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Tipo</legend>
         <div className="flex flex-wrap gap-2">
-          {TIPOS.map((t) => (
+          {TIPOS_VISITA.map((t) => (
             <label
               key={t.valor}
               className={`cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold ring-1 transition-colors ${

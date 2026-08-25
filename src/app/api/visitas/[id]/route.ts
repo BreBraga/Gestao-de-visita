@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { exigirUsuario } from '@/lib/auth/atual'
 import { buscarVisita, editarVisita, db } from '@/lib/visita/repositorio'
 import { sincronizar } from '@/lib/visita/sincronizador'
+import { VALORES_TIPO } from '@/lib/visita/tipos'
 
 export async function GET(_req: Request, { params }: RouteContext<'/api/visitas/[id]'>) {
   const u = await exigirUsuario()
@@ -20,7 +21,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/api/visitas/
 const Edicao = z.object({
   titulo: z.string().trim().min(1).max(500).optional(),
   descricao: z.string().trim().max(2000).nullable().optional(),
-  tipo: z.enum(['prospeccao', 'manutencao', 'pedido', 'entrega', 'outro']).optional(),
+  tipo: z.enum(VALORES_TIPO).optional(),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve ser AAAA-MM-DD').optional(),
 })
 
