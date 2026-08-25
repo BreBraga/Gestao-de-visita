@@ -22,6 +22,6 @@ export async function exigirUsuario(): Promise<Usuario> {
 
 export async function exigirGestor(): Promise<Usuario> {
   const u = await exigirUsuario()
-  if (u.papel !== 'gestor') redirect('/kanban')
+  if (u.papel !== 'gestor') redirect('/agenda')
   return u
 }

@@ -28,7 +28,7 @@ export default async function DetalheVisita({ params }: PageProps<'/visita/[id]'
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 p-4">
-      <Link href="/kanban" className="text-sm text-slate-600">
+      <Link href="/agenda" className="text-sm text-slate-600">
         ← Voltar
       </Link>
 

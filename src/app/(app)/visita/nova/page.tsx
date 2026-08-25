@@ -9,7 +9,7 @@ export default async function NovaVisita() {
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-6 p-4">
-      <Link href="/kanban" className="text-sm text-slate-600">
+      <Link href="/agenda" className="text-sm text-slate-600">
         ← Voltar
       </Link>
       <h1 className="text-xl font-semibold">Nova visita</h1>
