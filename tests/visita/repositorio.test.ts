@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { criarBancoDeTeste, criarUsuarioDeTeste } from '../apoio/banco'
-import { criarVisita, buscarVisita, listarDoDia } from '@/lib/visita/repositorio'
+import { criarVisita, buscarVisita, listarDoDia, mudarStatus } from '@/lib/visita/repositorio'
 import { criarUsuarioDeTeste as criarOutroUsuario } from '../apoio/banco'
 
 const CONTATO = '22222222-2222-2222-2222-222222222222'
@@ -116,5 +116,43 @@ describe('listarDoDia', () => {
     const doDia = await listarDoDia(banco.db, { data: '2026-08-25' })
 
     expect(doDia.map((v) => v.titulo)).toEqual(['PRIMEIRA', 'SEGUNDA'])
+  })
+})
+
+describe('mudarStatus', () => {
+  it('marca realizada e guarda o relatório', async () => {
+    const v = await criarVisita(banco.db, entrada())
+
+    const alterada = await mudarStatus(banco.db, v.id, 'realizada', 'Cliente fechou 3 carros')
+
+    expect(alterada?.status).toBe('realizada')
+    expect(alterada?.relatorio).toBe('Cliente fechou 3 carros')
+  })
+
+  it('marca cancelada sem exigir relatório', async () => {
+    const v = await criarVisita(banco.db, entrada())
+
+    const alterada = await mudarStatus(banco.db, v.id, 'cancelada')
+
+    expect(alterada?.status).toBe('cancelada')
+    expect(alterada?.relatorio).toBeNull()
+  })
+
+  it('mexe em atualizada_em, para o sincronizador saber que mudou', async () => {
+    const v = await criarVisita(banco.db, entrada())
+
+    const alterada = await mudarStatus(banco.db, v.id, 'realizada')
+
+    expect(alterada!.atualizadaEm.getTime()).toBeGreaterThanOrEqual(v.atualizadaEm.getTime())
+  })
+
+  it('devolve null para id que não existe', async () => {
+    const alterada = await mudarStatus(
+      banco.db,
+      '33333333-3333-3333-3333-333333333333',
+      'realizada'
+    )
+
+    expect(alterada).toBeNull()
   })
 })

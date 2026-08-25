@@ -63,3 +63,24 @@ export async function listarDoDia(
     .where(and(...filtros))
     .orderBy(asc(visita.criadaEm))
 }
+
+export async function mudarStatus(
+  db: BancoVisita,
+  id: string,
+  status: 'realizada' | 'cancelada',
+  relatorio?: string | null
+): Promise<Visita | null> {
+  const [alterada] = await db
+    .update(visita)
+    .set({
+      status,
+      // `undefined` preserva o relatório que já existe; `null` apaga.
+      ...(relatorio !== undefined ? { relatorio } : {}),
+      atualizadaEm: new Date(),
+      // A cópia no Zaple ficou velha. Nulo põe a visita de volta na fila.
+      sincronizadoEm: null,
+    })
+    .where(eq(visita.id, id))
+    .returning()
+  return alterada ?? null
+}
