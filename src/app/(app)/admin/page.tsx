@@ -4,44 +4,68 @@ import { listarAgentes } from '@/lib/zaple/agentes'
 import { listarNaoSincronizadas, db } from '@/lib/visita/repositorio'
 import { FormUsuario } from './FormUsuario'
 import { Pendentes } from './Pendentes'
+import { CardUsuario } from './CardUsuario'
 
 export const dynamic = 'force-dynamic'
 
 export default async function Admin() {
-  await exigirGestor()
+  const eu = await exigirGestor()
   const [usuarios, agentes, pendentes] = await Promise.all([
     listarUsuarios(),
     listarAgentes(),
     listarNaoSincronizadas(db),
   ])
 
-  // Indexado por userId, que é o que guardamos em usuario.zapleUserId.
-  const nomeDoAgente = new Map(agentes.map((a) => [a.userId, a.nome]))
+  const vendedores = usuarios.filter((u) => u.papel === 'vendedor')
+  const gestores = usuarios.filter((u) => u.papel === 'gestor')
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4">
-      <h1 className="text-xl font-semibold">Vendedores</h1>
-      <Pendentes quantidade={pendentes.length} />
-      <FormUsuario agentes={agentes} />
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="font-display text-2xl font-semibold">Equipe</h1>
+        <p className="text-sm text-slate-500">
+          {vendedores.length} {vendedores.length === 1 ? 'vendedor' : 'vendedores'} ·{' '}
+          {gestores.length} {gestores.length === 1 ? 'gestor' : 'gestores'}
+        </p>
+      </div>
 
-      <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
-        {usuarios.length === 0 && (
-          <li className="px-4 py-6 text-center text-sm text-slate-500">Nenhum vendedor cadastrado ainda.</li>
+      <Pendentes quantidade={pendentes.length} />
+
+      <section className="flex flex-col gap-2">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+          Vendedores
+        </h2>
+        {vendedores.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-slate-300 px-5 py-6 text-center text-sm text-slate-500">
+            Nenhum vendedor cadastrado. Só vendedores aparecem no painel.
+          </p>
         )}
-        {usuarios.map((u) => (
-          <li key={u.id} className="flex items-center justify-between px-4 py-3">
-            <div>
-              <p className="font-medium">{u.nome}</p>
-              <p className="text-sm text-slate-500">
-                {u.telefone} · {u.papel} · Zaple: {nomeDoAgente.get(u.zapleUserId) ?? 'agente removido'}
-              </p>
-            </div>
-            <span className={u.ativo ? 'text-sm text-emerald-600' : 'text-sm text-slate-400'}>
-              {u.ativo ? 'ativo' : 'inativo'}
-            </span>
-          </li>
+        {vendedores.map((u) => (
+          <CardUsuario key={u.id} usuario={u} agentes={agentes} souEu={u.id === eu.id} />
         ))}
-      </ul>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+          Gestores
+        </h2>
+        <p className="px-1 text-sm text-slate-500">
+          Enxergam o painel e as visitas de todo mundo. As visitas que eles fazem não contam
+          nas métricas de vendedor.
+        </p>
+        {gestores.map((u) => (
+          <CardUsuario key={u.id} usuario={u} agentes={agentes} souEu={u.id === eu.id} />
+        ))}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+          Cadastrar pessoa
+        </h2>
+        <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+          <FormUsuario agentes={agentes} />
+        </div>
+      </section>
     </div>
   )
 }

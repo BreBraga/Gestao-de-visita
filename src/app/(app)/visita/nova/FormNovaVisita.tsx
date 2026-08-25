@@ -5,6 +5,14 @@ import type { Contato } from '@/lib/zaple/tipos'
 import { erroDaResposta } from '@/lib/api/cliente'
 import { hoje } from '@/lib/visita/datas'
 
+const TIPOS = [
+  { valor: 'prospeccao', rotulo: 'Prospecção', ajuda: 'Cliente novo' },
+  { valor: 'manutencao', rotulo: 'Manutenção', ajuda: 'Cliente da carteira' },
+  { valor: 'pedido', rotulo: 'Pedido', ajuda: 'Fechar compra' },
+  { valor: 'entrega', rotulo: 'Entrega', ajuda: 'Levar mercadoria' },
+  { valor: 'outro', rotulo: 'Outro', ajuda: 'Descreva abaixo' },
+] as const
+
 /**
  * A visita é sempre de quem está criando.
  *
@@ -22,6 +30,8 @@ export function FormNovaVisita() {
   const [telefoneNovo, setTelefoneNovo] = useState('')
   const [titulo, setTitulo] = useState('')
   const [prazo, setPrazo] = useState('')
+  const [tipo, setTipo] = useState('prospeccao')
+  const [descricao, setDescricao] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
@@ -89,6 +99,8 @@ export function FormNovaVisita() {
           // teria de consultar o Zaple por linha.
           contatoNome: escolhido.nome,
           data: prazo || hoje(),
+          tipo,
+          descricao: descricao.trim() || undefined,
         }),
       })
       if (!r.ok) {
@@ -212,8 +224,46 @@ export function FormNovaVisita() {
         />
       </label>
 
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 text-sm font-semibold">Tipo da visita</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {TIPOS.map((t) => (
+            <label
+              key={t.valor}
+              className={`flex cursor-pointer flex-col rounded-xl px-3 py-2.5 ring-1 transition-colors ${
+                tipo === t.valor
+                  ? 'bg-fazer/10 ring-fazer'
+                  : 'bg-white ring-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="tipo"
+                value={t.valor}
+                checked={tipo === t.valor}
+                onChange={(e) => setTipo(e.target.value)}
+                className="sr-only"
+              />
+              <span className="font-semibold">{t.rotulo}</span>
+              <span className="text-xs text-slate-500">{t.ajuda}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold">Motivo da visita (opcional)</span>
+        <textarea
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value)}
+          rows={3}
+          placeholder="Ex.: Levar amostra do filtro novo. Cliente pediu orçamento para a frota inteira."
+          className="w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2.5 placeholder:text-slate-400"
+        />
+      </label>
+
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-700">Data da visita</span>
+        <span className="text-sm font-semibold">Data da visita</span>
         <input
           required
           type="date"

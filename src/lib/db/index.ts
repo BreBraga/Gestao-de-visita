@@ -22,6 +22,19 @@ function conectar(): Conexao {
     // instância basta e evita estourar o limite do projeto.
     max: 3,
     idle_timeout: 20,
+    connection: {
+      // Uma consulta que passa de 15s aqui não está lenta, está presa: as
+      // telas leem tabelas pequenas e por índice. Sem teto, ela ocupa uma das
+      // três conexões até alguém perceber.
+      statement_timeout: 15_000,
+      // O teto que importa de verdade. `reagendar` e `realizarComRetorno`
+      // abrem transação, e uma requisição que morre no meio — o serverless
+      // desligando a instância, o navegador desistindo — deixaria a transação
+      // aberta segurando a conexão. Observado em desenvolvimento: uma
+      // transação órfã travou o app inteiro por nove minutos, com o Postgres
+      // parado em Client/ClientRead esperando um cliente que não voltaria.
+      idle_in_transaction_session_timeout: 10_000,
+    },
   })
 
   conexao = drizzle(cliente, { schema })

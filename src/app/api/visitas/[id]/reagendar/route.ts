@@ -23,7 +23,10 @@ export async function POST(req: Request, { params }: RouteContext<'/api/visitas/
   // Visita fechada não volta atrás. Sem esta guarda, reagendar uma visita já
   // realizada apagaria o fato de ela ter acontecido e ainda criaria uma
   // segunda linha — a mesma visita contada duas vezes no dashboard.
-  if (atual.status !== 'a_fazer') {
+  // Cancelada entra: retomar um cliente que desmarcou é justamente o caso em
+  // que reagendar serve para alguma coisa. Realizada e reagendada ficam fora —
+  // uma já aconteceu, a outra já tem substituta.
+  if (atual.status !== 'a_fazer' && atual.status !== 'cancelada') {
     return Response.json(
       { erro: 'Esta visita já foi fechada. Atualize a tela.' },
       { status: 409 }

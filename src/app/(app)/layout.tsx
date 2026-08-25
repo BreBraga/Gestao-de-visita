@@ -1,29 +1,30 @@
-import Link from 'next/link'
 import { exigirUsuario } from '@/lib/auth/atual'
 import { BotaoSair } from '@/components/BotaoSair'
+import { BarraInferior } from '@/components/BarraInferior'
 
 export const dynamic = 'force-dynamic'
 
 export default async function LayoutApp({ children }: LayoutProps<'/'>) {
   const u = await exigirUsuario()
+  const primeiroNome = u.nome.split(' ')[0]
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-        <Link href="/agenda" className="font-semibold">
-          Visitas
-        </Link>
-        <div className="flex items-center gap-3 text-sm">
-          {u.papel === 'gestor' && (
-            <Link href="/admin" className="text-slate-600">
-              Admin
-            </Link>
-          )}
-          <span className="text-slate-500">{u.nome}</span>
-          <BotaoSair />
+      <header className="bg-asfalto px-4 pt-[env(safe-area-inset-top)] text-white">
+        <div className="mx-auto flex max-w-2xl items-center justify-between py-3">
+          <span className="font-display text-lg font-semibold uppercase tracking-[0.14em]">
+            Visitas
+          </span>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-white/70">{primeiroNome}</span>
+            <BotaoSair />
+          </div>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-4">{children}</main>
+
+      <BarraInferior ehGestor={u.papel === 'gestor'} />
     </div>
   )
 }
