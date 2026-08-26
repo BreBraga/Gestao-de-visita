@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, gte, isNull, lte, ne } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import { db as bancoPadrao, usuario, visita, type Visita } from '@/lib/db'
 import type * as schema from '@/lib/db/schema'
+import type { ContagemTipo } from './painel-tipos'
 
 /**
  * A conexão entra por parâmetro para o teste injetar o Postgres em memória.
@@ -348,4 +349,36 @@ export async function historicoDoContato(
     .where(and(eq(visita.contatoId, contatoId), ne(visita.id, exceto)))
     .orderBy(desc(visita.data))
     .limit(20)
+}
+
+/**
+ * Quantas visitas realizadas de cada tipo, por vendedor, no período.
+ *
+ * O recorte por `papel = 'vendedor'` acompanha `resumoPorVendedor`: assim as
+ * duas seções do painel falam do mesmo conjunto de pessoas e não divergem.
+ *
+ * O índice `idx_visita_data_status` cobre o filtro de data e status.
+ */
+export async function contagemPorTipo(
+  db: BancoVisita,
+  de: string,
+  ate: string
+): Promise<ContagemTipo[]> {
+  return db
+    .select({
+      tipo: visita.tipo,
+      usuarioId: visita.usuarioId,
+      total: count(),
+    })
+    .from(visita)
+    .innerJoin(usuario, eq(usuario.id, visita.usuarioId))
+    .where(
+      and(
+        eq(visita.status, 'realizada'),
+        gte(visita.data, de),
+        lte(visita.data, ate),
+        eq(usuario.papel, 'vendedor')
+      )
+    )
+    .groupBy(visita.tipo, visita.usuarioId)
 }
