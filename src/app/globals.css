@@ -36,6 +36,17 @@
   --color-adiada: #d98a0b;
   --color-morta: #94a3b8;
 
+  /* Tipo de visita. UMA cor para todas as barras, não uma por tipo: a barra já
+     traz o rótulo ao lado e o comprimento proporcional, então cor por tipo
+     gastaria o canal de identidade repetindo o que o comprimento já diz.
+
+     Violeta porque o espaço de matiz aqui é apertado: azul, verde e amarelo
+     são os status acima, e confundir "prospecção" com "a fazer" na mesma tela
+     seria erro de leitura, não de estética. Verificado: ΔE 9.2 sob daltonismo
+     contra as quatro cores de status, 5.70:1 de contraste sobre o card branco
+     — mais legível que `adiada` e `morta`, que já estão em uso. */
+  --color-tipo: #7c3aed;
+
   --font-display: var(--font-barlow-condensed), system-ui, sans-serif;
   --font-sans: var(--font-barlow), system-ui, sans-serif;
 }

@@ -1,6 +1,14 @@
 import Link from 'next/link'
 import { exigirGestor } from '@/lib/auth/atual'
-import { resumoPorVendedor, listarNaoSincronizadas, db } from '@/lib/visita/repositorio'
+import {
+  resumoPorVendedor,
+  listarNaoSincronizadas,
+  contagemPorTipo,
+  db,
+} from '@/lib/visita/repositorio'
+import { fatiasPorTipo } from '@/lib/visita/painel-tipos'
+import { BarrasPorTipo } from './BarrasPorTipo'
+import { CardVendedor } from './CardVendedor'
 import { hoje, somarDias, formatarDia } from '@/lib/visita/datas'
 
 export const dynamic = 'force-dynamic'
@@ -20,10 +28,13 @@ export default async function Painel({ searchParams }: PageProps<'/painel'>) {
   const ate = hoje()
   const de = somarDias(ate, -diasValidos)
 
-  const [linhas, pendentes] = await Promise.all([
+  const [linhas, pendentes, contagens] = await Promise.all([
     resumoPorVendedor(db, de, ate),
     listarNaoSincronizadas(db),
+    contagemPorTipo(db, de, ate),
   ])
+
+  const fatiasDaEquipe = fatiasPorTipo(contagens)
 
   const total = linhas.reduce(
     (acc, l) => ({
@@ -86,6 +97,19 @@ export default async function Painel({ searchParams }: PageProps<'/painel'>) {
         </section>
       )}
 
+      {fatiasDaEquipe.length > 0 && (
+        <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
+          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+            Por tipo
+          </h2>
+          <p className="mb-4 mt-1 text-sm text-slate-500">
+            {total.realizadas} {total.realizadas === 1 ? 'visita realizada' : 'visitas realizadas'}{' '}
+            no período.
+          </p>
+          <BarrasPorTipo fatias={fatiasDaEquipe} />
+        </section>
+      )}
+
       <section className="flex flex-col gap-2">
         <h2 className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
           Por vendedor
@@ -97,37 +121,13 @@ export default async function Painel({ searchParams }: PageProps<'/painel'>) {
           </p>
         )}
 
-        {linhas.map((l) => {
-          const fechadasDele = l.realizadas + l.canceladas
-          const pct = fechadasDele === 0 ? 0 : Math.round((l.realizadas / fechadasDele) * 100)
-          return (
-            <article
-              key={l.usuarioId}
-              className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70"
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="truncate font-display text-lg font-semibold">{l.vendedor}</h3>
-                <span className="shrink-0 font-display text-lg font-semibold text-feita">
-                  {l.realizadas}
-                </span>
-              </div>
-
-              <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-slate-100">
-                {/* A barra é a distribuição real do trabalho dele, não um enfeite:
-                    cada faixa é uma fatia dos status no período. */}
-                <Faixa n={l.realizadas} de={l.realizadas + l.aFazer + l.canceladas + l.reagendadas} cor="bg-feita" />
-                <Faixa n={l.aFazer} de={l.realizadas + l.aFazer + l.canceladas + l.reagendadas} cor="bg-fazer" />
-                <Faixa n={l.reagendadas} de={l.realizadas + l.aFazer + l.canceladas + l.reagendadas} cor="bg-adiada" />
-                <Faixa n={l.canceladas} de={l.realizadas + l.aFazer + l.canceladas + l.reagendadas} cor="bg-morta" />
-              </div>
-
-              <p className="mt-2 text-sm text-slate-500">
-                {l.aFazer} a fazer · {l.reagendadas} reagendadas · {l.canceladas} canceladas
-                {fechadasDele > 0 && ` · ${pct}% de conclusão`}
-              </p>
-            </article>
-          )
-        })}
+        {linhas.map((l) => (
+          <CardVendedor
+            key={l.usuarioId}
+            linha={l}
+            fatias={fatiasPorTipo(contagens.filter((c) => c.usuarioId === l.usuarioId))}
+          />
+        ))}
       </section>
 
       {pendentes.length > 0 && (
@@ -167,9 +167,4 @@ function Numero({
       <p className="text-sm text-slate-500">{rotulo}</p>
     </div>
   )
-}
-
-function Faixa({ n, de, cor }: { n: number; de: number; cor: string }) {
-  if (n === 0 || de === 0) return null
-  return <div className={cor} style={{ width: `${(n / de) * 100}%` }} />
 }
