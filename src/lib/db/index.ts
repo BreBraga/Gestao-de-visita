@@ -20,7 +20,14 @@ function conectar(): Conexao {
     prepare: false,
     // Serverless: cada instância é efêmera, então um punhado de conexões por
     // instância basta e evita estourar o limite do projeto.
-    max: 3,
+    //
+    // Cai para 1 com DB_POOL_MAX=1, que é o que o Postgres embarcado do
+    // desenvolvimento local exige: o PGlite serve tudo por uma conexão só, e
+    // multiplexa mal statements concorrentes. Como o /painel dispara três
+    // consultas em paralelo, com pool maior que 1 ele responde
+    // "unnamed prepared statement does not exist" e a tela quebra — só
+    // localmente, nunca contra um Postgres de verdade.
+    max: Number(process.env.DB_POOL_MAX ?? 3),
     idle_timeout: 20,
     connection: {
       // Uma consulta que passa de 15s aqui não está lenta, está presa: as
