@@ -93,14 +93,14 @@ dentro:
   fatias já calculadas e só desenha; não sabe de onde vêm.
 - `CardVendedor.tsx` — o card, agora com o botão e o estado de expansão. Absorve o
   `<article>` que hoje está inline no `page.tsx`.
-E uma alteração pequena em `lib/visita/tipos.ts`, que **já existe** e já é a fonte
-única dos tipos: ganha a cor de cada tipo, ao lado do rótulo e da ajuda que já estão
-lá. O comentário no topo daquele arquivo conta que essa lista já esteve copiada em
-cinco lugares e que uma cópia esquecida derrubou a criação de visita em produção —
-razão suficiente para a cor nascer lá dentro e não num mapa novo ao lado.
+`lib/visita/tipos.ts` **não muda**. Como as barras têm uma cor só, não há cor por tipo
+para guardar ali. O módulo já expõe `rotuloDoTipo()`, que mapeia `recorrente` para
+"Manutenção", e a agregação apenas o consome.
 
-Aquele módulo também já expõe `rotuloDoTipo()`, que mapeia `recorrente` para
-"Manutenção". A agregação reusa essa função em vez de repetir a regra.
+Isso importa: aquele arquivo abre com o registro de que a lista de tipos já esteve
+copiada em cinco lugares e de que uma cópia esquecida derrubou a criação de visita em
+produção. Não acrescentar nada a ele é a decisão certa quando não há o que
+acrescentar.
 
 ---
 
@@ -115,14 +115,39 @@ A paleta atual usa cor como código de trânsito de status, e isso está documen
 Pintar "prospecção" de azul faria o leitor ler "a fazer" — e ele acabou de aprender
 esse código na seção acima, cinco segundos antes, na mesma tela.
 
-Os tipos recebem uma paleta categórica própria, deliberadamente distante das quatro
-cores de status, declarada como tokens no `@theme` junto das demais. Os requisitos:
-cinco matizes distinguíveis entre si, legíveis sob luz direta — a condição real de uso
-— e que sobrevivam a daltonismo, que atinge cerca de 8% dos homens e esta é uma equipe
-majoritariamente masculina em campo.
+### As cinco barras têm UMA cor, não cinco
 
-A escolha dos valores acontece na implementação, com a skill de visualização de dados
-carregada. Este spec fixa a restrição, não os hexadecimais.
+A primeira versão deste spec pedia cinco matizes distinguíveis. Estava errado, por
+duas razões que só apareceram ao aplicar o método de visualização de dados.
+
+**A cor não teria trabalho a fazer.** Cada barra já carrega o rótulo ao lado e o
+comprimento proporcional. Tipo é categoria *nominal*, e a regra para barra nominal é
+que todas usem o mesmo matiz: colorir cada uma de um jeito gasta o canal de identidade
+para repetir o que o comprimento e o rótulo já dizem. Cinco cores ali seriam
+decoração, não informação.
+
+**E não haveria espaço para elas.** Das oito famílias de matiz que a paleta de
+referência oferece, três — azul, verde e amarelo — são exatamente `fazer`, `feita` e
+`adiada`. Sobrariam quatro para cinco tipos, e as candidatas restantes reprovaram nas
+medições.
+
+**A cor escolhida é `#7c3aed`**, um violeta, aplicado a todas as barras de tipo nos
+dois níveis. Verificado com o validador de paletas:
+
+| Medição | Resultado |
+|---|---|
+| Separação sob daltonismo, contra as quatro de status | ΔE 9.2 no pior par (meta ≥ 8) |
+| Piso de visão normal | passa — o pior par sequer envolve o violeta |
+| Contraste sobre o card branco | 5.70:1 (marca exige ≥ 3:1) |
+| Contraste sobre o fundo névoa | 5.07:1 |
+
+Para calibragem: `adiada` e `morta`, já em produção, ficam em 2.77:1 e 2.56:1. O
+violeta é mais legível que ambas.
+
+Como é uma cor só, não há legenda — o título da seção nomeia o que está sendo medido,
+e cada barra se identifica pelo próprio rótulo.
+
+O token entra no `@theme` do `globals.css` como `--color-tipo`, ao lado dos demais.
 
 ---
 
