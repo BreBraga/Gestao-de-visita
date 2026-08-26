@@ -6,6 +6,7 @@ import { erroDaResposta } from '@/lib/api/cliente'
 import type { VisitaDoDia } from '@/lib/visita/repositorio'
 import { Reagendar } from './Reagendar'
 import { Realizar } from './Realizar'
+import { rotuloDoTipo } from '@/lib/visita/tipos'
 
 /**
  * A faixa colorida à esquerda do card é o que permite ler a agenda inteira
@@ -129,7 +130,7 @@ export function ListaDoDia({
                         {v.contatoNome}
                       </h3>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
-                        <span>{v.tipo === 'recorrente' ? 'Cliente recorrente' : 'Prospecção'}</span>
+                        <span>{rotuloDoTipo(v.tipo)}</span>
                         {mostrarVendedor && (
                           <>
                             <span aria-hidden="true">·</span>

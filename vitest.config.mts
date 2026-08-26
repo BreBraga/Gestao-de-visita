@@ -18,6 +18,17 @@ export default defineConfig({
      */
     testTimeout: 20_000,
     hookTimeout: 20_000,
+    /**
+     * Um arquivo de teste por vez.
+     *
+     * Em paralelo, cada arquivo sobe seu próprio Postgres em memória e roda
+     * bcrypt ao mesmo tempo que os outros. A máquina satura, os casos
+     * estouram o relógio, e a falha muda de lugar a cada rodada — o pior tipo
+     * de teste, porque ensina a suspeitar do relógio em vez do código.
+     *
+     * A suíte fica mais lenta e passa a dizer a verdade. É a troca certa.
+     */
+    fileParallelism: false,
   },
   resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
 })
