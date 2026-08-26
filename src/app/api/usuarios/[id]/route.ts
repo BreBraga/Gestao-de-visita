@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { exigirGestor } from '@/lib/auth/atual'
 import { alterarUsuario, listarUsuarios } from '@/lib/auth/usuarios'
 import { listarAgentes } from '@/lib/zaple/agentes'
-import { responderErroZaple } from '@/lib/api/erros'
+import { responderErroZaple, erroDeValidacao } from '@/lib/api/erros'
 
 const Patch = z.object({
   nome: z.string().trim().min(2).optional(),
@@ -19,7 +19,7 @@ export async function PATCH(req: Request, { params }: RouteContext<'/api/usuario
   const { id } = await params
 
   const analisado = Patch.safeParse(await req.json().catch(() => null))
-  if (!analisado.success) return Response.json({ erro: 'Dados inválidos' }, { status: 400 })
+  if (!analisado.success) return erroDeValidacao(analisado.error)
 
   // Um gestor que se rebaixa ou se desativa perde o acesso a esta tela — e se
   // for o último, ninguém mais consegue cadastrar pessoas. É o problema do

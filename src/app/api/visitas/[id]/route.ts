@@ -3,6 +3,7 @@ import { exigirUsuario } from '@/lib/auth/atual'
 import { buscarVisita, editarVisita, db } from '@/lib/visita/repositorio'
 import { sincronizar } from '@/lib/visita/sincronizador'
 import { VALORES_TIPO } from '@/lib/visita/tipos'
+import { erroDeValidacao } from '@/lib/api/erros'
 
 export async function GET(_req: Request, { params }: RouteContext<'/api/visitas/[id]'>) {
   const u = await exigirUsuario()
@@ -30,7 +31,7 @@ export async function PATCH(req: Request, { params }: RouteContext<'/api/visitas
   const { id } = await params
 
   const analisado = Edicao.safeParse(await req.json().catch(() => null))
-  if (!analisado.success) return Response.json({ erro: 'Dados inválidos' }, { status: 400 })
+  if (!analisado.success) return erroDeValidacao(analisado.error)
 
   const atual = await buscarVisita(db, id)
   if (!atual) return Response.json({ erro: 'Visita não encontrada' }, { status: 404 })

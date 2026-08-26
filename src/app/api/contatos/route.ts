@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { exigirUsuario } from '@/lib/auth/atual'
 import { buscarContatoPorTelefone, buscarContatosPorNome, criarContato } from '@/lib/zaple/contatos'
-import { responderErroZaple } from '@/lib/api/erros'
+import { responderErroZaple, erroDeValidacao } from '@/lib/api/erros'
 
 export async function GET(req: Request) {
   await exigirUsuario()
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   await exigirUsuario()
 
   const analisado = NovoContato.safeParse(await req.json().catch(() => null))
-  if (!analisado.success) return Response.json({ erro: 'Informe nome e telefone' }, { status: 400 })
+  if (!analisado.success) return erroDeValidacao(analisado.error)
 
   try {
     // Criar duplicata de um cliente que já existe suja a base do CRM inteiro,

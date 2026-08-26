@@ -8,6 +8,7 @@ import {
   db,
 } from '@/lib/visita/repositorio'
 import { sincronizar } from '@/lib/visita/sincronizador'
+import { erroDeValidacao } from '@/lib/api/erros'
 
 const DataISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve ser AAAA-MM-DD')
 
@@ -26,7 +27,7 @@ export async function POST(req: Request, { params }: RouteContext<'/api/visitas/
   const { id } = await params
 
   const analisado = Entrada.safeParse(await req.json().catch(() => null))
-  if (!analisado.success) return Response.json({ erro: 'Dados inválidos' }, { status: 400 })
+  if (!analisado.success) return erroDeValidacao(analisado.error)
 
   const atual = await buscarVisita(db, id)
   if (!atual) return Response.json({ erro: 'Visita não encontrada' }, { status: 404 })

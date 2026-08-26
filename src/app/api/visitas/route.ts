@@ -4,6 +4,7 @@ import { criarVisita, listarDoDia, buscarVisita, db } from '@/lib/visita/reposit
 import { sincronizar } from '@/lib/visita/sincronizador'
 import { VALORES_TIPO } from '@/lib/visita/tipos'
 import { hoje } from '@/lib/visita/datas'
+import { erroDeValidacao } from '@/lib/api/erros'
 
 /** 'YYYY-MM-DD'. String, não Date: o fuso não pode mover a visita de dia. */
 const DataISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve ser AAAA-MM-DD')
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
 
   const analisado = NovaEntrada.safeParse(await req.json().catch(() => null))
   if (!analisado.success) {
-    return Response.json({ erro: 'Informe cliente, título e data' }, { status: 400 })
+    return erroDeValidacao(analisado.error)
   }
 
   // Um dos dois sem o outro é ambíguo: decidir por conta própria criaria a
